@@ -33,14 +33,75 @@ sys.path.insert(0, path_kinekit + os.path.sep + 'sources')
 # Import from kineKit
 import acqfunctions as af
 
+# Extract experiment catalog info
+cat = af.get_cat_info(cat_path)
+
 
 ##
-""" Uses kineKit to generate video from catalog parameters and make videos """
-
-# Extract info for videos to generate
-df = af.get_cat_info(cat_path)
+""" Uses kineKit to crop and compress video from catalog parameters """
 
 # Make the videos
-af.convert_videos(df, vidin_path, vidout_path, imquality=0.75, vertpix=720)
+# af.convert_videos(cat, vidin_path, vidout_path, imquality=0.75, vertpix=720)
+
+
+##
+""" Acquire the pixel intensity of a movie """
+
+# import videotools as vt
+import cv2 as cv  # openCV for interacting with video
+import numpy as np
+import pandas as pd
+
+c_row = 0
+
+vid_path = vidout_path + os.path.sep + cat.video_filename[c_row] + '.mp4'
+
+# Check for file existance
+if not os.path.isfile(vid_path):
+    raise Exception("Video file does not exist")
+
+# Define video object &  video frame
+vid = cv.VideoCapture(vid_path)
+
+# Video duration (in frames)
+frame_count = int(vid.get(cv.CAP_PROP_FRAME_COUNT))
+
+# Time step
+dt = 1/cat.fps[c_row]
+
+# Set up containers
+# pix_val = pd.Series(dtype=float)
+# time = pd.Series(dtype=float)
+
+df = pd.DataFrame(columns=['time_s', 'meanpixval'])
+
+time_c = float(0)
+
+# Loop thru frames
+for fr_num in range(1, frame_count):
+
+    # Load image
+    # vid.set(cv.CAP_PROP_POS_FRAMES, fr_num)
+    # _, im = vid.read()
+
+    df_c = pd.DataFrame([[time_c, np.mean(im, axis=(0, 1, 2))]],
+                        columns=['time_s', 'meanpixval'])
+
+    # Add to dataframe
+    df = df.append(df_c, ignore_index=True)
+
+    # Advance time
+    time_c = time_c + dt
+
+
+    # # Store mean pixel intensity
+    # pix_val.append(np.mean(im, axis=(0, 1, 2)))
+    #
+    # # Store time, then advance it
+    # time.append(c_time)
+    # c_time = c_time + dt
+
+# Turn off connection to video file
+cv.destroyAllWindows()
 
 
