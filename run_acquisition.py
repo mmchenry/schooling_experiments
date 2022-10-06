@@ -1,8 +1,8 @@
-##
+#%%
 """ Parameters and packages """
 import sys
 import os
-import platform
+import def_definepaths as dd
 
 # Run these lines at the iPython interpreter when developing the module code
 # %load_ext autoreload
@@ -10,25 +10,11 @@ import platform
 # Use this to check version update
 # af.report_version()
 
-# These are the paths on Matt's laptop
-if platform.system() == 'Darwin' and os.path.isdir('/Users/mmchenry/'):
-    # Path to kineKit code
-    path_kinekit = '/Users/mmchenry/Documents/code/kineKit'
-
-    # Path to experiment catalog file
-    cat_path = '/Users/mmchenry/Documents/Projects/waketracking/data/expt_catalog.csv'
-
-    # Path to raw videos
-    vidin_path = '/Users/mmchenry/Documents/Projects/waketracking/video/pilot_raw'
-
-    # Path to exported videos
-    vidout_path = '/Users/mmchenry/Documents/Projects/waketracking/video/pilot_compressed'
-
-else:
-    raise ValueError('Do not recognize this account -- add lines of code to define paths here')
+# Get paths (specific to system running code)
+path = dd.give_paths()
 
 # Add path to kineKit 'sources' directory using sys package
-sys.path.insert(0, path_kinekit + os.path.sep + 'sources')
+sys.path.insert(0, path['kinekit'] + os.path.sep + 'sources')
 
 # Import from kineKit
 import acqfunctions as af
@@ -37,71 +23,51 @@ import acqfunctions as af
 cat = af.get_cat_info(cat_path)
 
 
-##
+#%%
 """ Uses kineKit to crop and compress video from catalog parameters """
 
 # Make the videos
-# af.convert_videos(cat, vidin_path, vidout_path, imquality=0.75, vertpix=720)
+af.convert_videos(cat, path['vidin'], path['vidout'], imquality=0.75, vertpix=720)
 
 
-##
-""" Acquire the pixel intensity of a movie """
+#%%
+""" Acquire the pixel intensity from movies in cat """
 
-# import videotools as vt
-import cv2 as cv  # openCV for interacting with video
-import numpy as np
+# # import videotools as vt
+# import cv2 as cv  # openCV for interacting with video
+# import numpy as np
+# import pandas as pd
+
+import def_acquisition as da
+
+# Batch run to analyze pixel intensity of all videos in cat
+da.measure_pixintensity(cat, path['data'], path['vidout'])
+
+
+#%%
+""" Plot pixel intensity for each video analyzed """
+
 import pandas as pd
-
-c_row = 0
-
-vid_path = vidout_path + os.path.sep + cat.video_filename[c_row] + '.mp4'
-
-# Check for file existance
-if not os.path.isfile(vid_path):
-    raise Exception("Video file does not exist")
-
-# Define video object &  video frame
-vid = cv.VideoCapture(vid_path)
-
-# Video duration (in frames)
-frame_count = int(vid.get(cv.CAP_PROP_FRAME_COUNT))
-
-# Time step
-dt = 1/cat.fps[c_row]
-
-# Set up containers
-# pix_val = pd.Series(dtype=float)
-# time = pd.Series(dtype=float)
-
-df = pd.DataFrame(columns=['time_s', 'meanpixval'])
-
-time_c = float(0)
-
-# Loop thru frames
-for fr_num in range(1, frame_count):
-
-    # Load image
-    # vid.set(cv.CAP_PROP_POS_FRAMES, fr_num)
-    # _, im = vid.read()
-
-    df_c = pd.DataFrame([[time_c, np.mean(im, axis=(0, 1, 2))]],
-                        columns=['time_s', 'meanpixval'])
-
-    # Add to dataframe
-    df = df.append(df_c, ignore_index=True)
-
-    # Advance time
-    time_c = time_c + dt
+import glob
+import plotly.express as px
 
 
-    # # Store mean pixel intensity
-    # pix_val.append(np.mean(im, axis=(0, 1, 2)))
-    #
-    # # Store time, then advance it
-    # time.append(c_time)
-    # c_time = c_time + dt
+# path = os.getcwd()
+csv_files = glob.glob(os.path.join(path['data'], "*.pixelintensity"))
 
-# Turn off connection to video file
-cv.destroyAllWindows()
+# Loop thru each video listed in cat
+for c_row in cat.index:
+
+    # Unique identifier for the current sequence
+    exp_name = cat.date[c_row] + '_' + format(cat.exp_num[c_row],'03')
+
+    # Path for output data for current sequence
+    din_path = path['data'] + os.path.sep + exp_name + '_pixelintensity'
+
+    # Read dataframe and plot pixel intensity
+    df = pd.read_pickle(din_path)
+    fig = px.line(df,x="time_s", y="meanpixval", title=exp_name)
+    fig.show()
 
 
+# %%

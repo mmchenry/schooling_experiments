@@ -9,11 +9,17 @@ This entails use of DLC to generate coordinates from videos.
 
 - **run_acquisition.py**: Uses kineKit to generate video from catalog parameters and make videos.  
 
-## Processing
-Taking the raw coordinates from DLC videos, cleaning the data, and generating parameter metrics of the kinematics. Controlled with runProcessing.
+[//]: # ()
+[//]: # (## Processing)
 
-## Analysis
-Exploratory data analysis. 
+[//]: # (Taking the raw coordinates from DLC videos, cleaning the data, and generating parameter metrics of the kinematics. Controlled with runProcessing.)
 
-## Presentation 
-Stats and final figure construction.
+[//]: # ()
+[//]: # (## Analysis)
+
+[//]: # (Exploratory data analysis. )
+
+[//]: # ()
+[//]: # (## Presentation )
+
+[//]: # (Stats and final figure construction.)
