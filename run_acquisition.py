@@ -1,37 +1,154 @@
+
 #%%
-""" Parameters and packages """
+""" Parameters and packages 
+-----------------------------------------------------------------------------------------------------
+"""
 import sys
 import os
 import def_definepaths as dd
-
-# Run these lines at the iPython interpreter when developing the module code
-# %load_ext autoreload
-# %autoreload 2
-# Use this to check version update
-# af.report_version()
 
 # Get paths (specific to system running code)
 path = dd.give_paths()
 
 # Add path to kineKit 'sources' directory using sys package
-sys.path.insert(0, path['kinekit'] + os.path.sep + 'sources')
+sys.path.insert(0, path['kinekit'] + os.sep + 'sources')
 
 # Import from kineKit
 import acqfunctions as af
 
 # Extract experiment catalog info
-cat = af.get_cat_info(cat_path)
+cat = af.get_cat_info(path['cat'])
+
+# Raw video extension
+vid_ext_raw = 'MOV'
+
+# TODO: Make ability to interactively select elliptical ROI from a single video frame
+# TODO: Save PNG image to serve as mask from elliptical shape
+# TODO: Add column to spreadsheet for saving mask image filename, so masks can be reused
+
+
+# %% 
+""" Save a single video frame to 'mask' folder
+-----------------------------------------------------------------------------------------------------
+"""
+import videotools as vt
+import cv2 as cv
+
+# Extract experiment catalog info
+cat = af.get_cat_info(path['cat'])
+
+# Index of video in cat list to extract video
+vid_index = 0
+
+# Define path
+full_path = path['vidin'] + os.sep + cat.video_filename[vid_index] + '.' + vid_ext_raw
+
+# Extract frame and save to 'mask' directory
+im = vt.get_frame(full_path)
+cv.imwrite(path['mask'] + os.sep + 'frame_from_' + cat.video_filename[vid_index] + '.jpg', im)
+
+
+# %% 
+""" Make mask
+-----------------------------------------------------------------------------------------------------
+"""
+import cv2 as cv
+import numpy as np
+import videotools as vt
+
+# Extract experiment catalog info
+cat = af.get_cat_info(path['cat'])
+
+# Index of video in cat list to extract video
+vid_index = 0
+
+# Define path
+full_path = path['vidin'] + os.sep + cat.video_filename[vid_index] + '.' + vid_ext_raw
+
+# Extract video frame 
+im = vt.get_frame(full_path)
+
+# Extract roi coordinates
+x_roi = float(cat.roi_x[vid_index])
+y_roi = float(cat.roi_y[vid_index])
+w_roi = float(cat.roi_w[vid_index])
+h_roi = float(cat.roi_h[vid_index])
+xC = x_roi + w_roi/2
+yC = y_roi + h_roi/2
+dims = (int(np.ceil(w_roi/2)), int(np.ceil(h_roi/2)))
+cntr = (int(x_roi + w_roi/2), int(y_roi + h_roi/2))
+
+# Define transparent image for mask
+im = cv.ellipse(im, cntr, dims, angle=0, startAngle=0, endAngle=360, color=(255,255,255),thickness=-1)
+trans_img = int(255/3) * np.ones((im.shape[0], im.shape[1], 4), dtype=np.uint8)
+trans_img[np.where(np.all(im[..., :3] == 255, -1))] = 0
+
+# Write mask file to disk
+while True:
+    filename = input('What filename do you want to use for the mask?')
+    if os.path.isfile(path['mask'] + os.sep + filename + '.png'):
+        print('The filename ' + filename + ' already exists. Try again.')
+    else:
+        cv.imwrite(path['mask'] + os.sep + filename + '.png', trans_img)
+        print('Mask file saved: ' + path['mask'] + os.sep + filename + '.png')
+        break
 
 
 #%%
-""" Uses kineKit to crop and compress video from catalog parameters """
+""" Uses kineKit to crop and compress video from catalog parameters 
+-----------------------------------------------------------------------------------------------------
+"""
 
-# Make the videos
-af.convert_videos(cat, path['vidin'], path['vidout'], imquality=0.75, vertpix=720)
+# Make the masked videos (stored in 'tmp' directory)
+print(' ')
+print('=====================================================')
+print('First, creating masked videos . . .')
+af.convert_masked_videos(cat, in_path=path['vidin'], out_path=path['tmp'], maskpath=path['mask'], vmode=False, imquality=1)
+
+
+# Make the downsampled/cropped videos  (stored in 'pilot_compressed' directory)
+print(' ')
+print('=====================================================')
+print('Second, creating downsampled and cropped videos . . .')
+af.convert_videos(cat, in_path=path['tmp'], out_path=path['vidout'], vmode=False, imquality=0.75, vertpix=720, suffix_in='mp4')
+
+# Survey resulting directories 
+# Loop thru each video listed in cat
+print(' ')
+print('=====================================================')
+print('Surveying results . . .')
+for c_row in cat.index:
+    # Input video path
+    vid_in_path = path['vidin'] + os.sep + cat.video_filename[c_row] + '.' + os.sep + vid_ext_raw
+
+    # Temp video path
+    vid_tmp_path = path['tmp'] + os.sep + cat.video_filename[c_row] + '.mp4'
+
+    # Output video path
+    vid_out_path = path['vidout'] + os.sep + cat.video_filename[c_row] + '.mp4'
+
+    # Check that output file was made
+    if not os.path.isfile(vid_out_path):
+
+        print('   Output movie NOT created successfully: ' + vid_out_path)
+
+        if os.path.isfile(vid_tmp_path):
+            print('   Also, temp. movie NOT created successfully: ' + vid_tmp_path)
+        else:
+            print('   But, temp. movie created successfully: ' + vid_tmp_path)
+    else:
+
+        print('   Output movie created successfully: ' + vid_out_path)
+
+        # Delete temp file
+        if os.path.isfile(vid_tmp_path):
+            os.remove(vid_tmp_path)
 
 
 #%%
-""" Acquire the pixel intensity from movies in cat """
+""" Acquire the pixel intensity from movies in cat 
+-----------------------------------------------------------------------------------------------------
+"""
 
 # # import videotools as vt
 # import cv2 as cv  # openCV for interacting with video
@@ -45,7 +162,9 @@ da.measure_pixintensity(cat, path['data'], path['vidout'])
 
 
 #%%
-""" Plot pixel intensity for each video analyzed """
+""" Plot pixel intensity for each video analyzed 
+-----------------------------------------------------------------------------------------------------
+"""
 
 import pandas as pd
 import glob
@@ -70,4 +189,10 @@ for c_row in cat.index:
     fig.show()
 
 
-# %%
+
+
+    # Run these lines at the iPython interpreter when developing the module code
+# %load_ext autoreload
+# %autoreload 2
+# Use this to check version update
+# af.report_version()

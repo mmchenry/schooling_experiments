@@ -1,57 +1,50 @@
 """
-
 function for defining the paths for all code in the project
-
-
 """
 
 import os
 import platform
-
 
 def give_paths():
 
     # These are the paths on Matt's laptop
     if platform.system() == 'Darwin' and os.path.isdir('/Users/mmchenry/'):
 
-        paths = {
-        # Path to kineKit code
-        'kinekit':  '/Users/mmchenry/Documents/code/kineKit', 
+        root_code = '/Users/mmchenry/Documents/code'
+        root_proj = '/Users/mmchenry/Documents/Projects/waketracking'
 
-        # Path to experiment catalog file
-        'cat': '/Users/mmchenry/Documents/Projects/waketracking/expt_catalog.csv', 
-
-        # Path to experiment catalog file
-        'data': '/Users/mmchenry/Documents/Projects/waketracking/data',
-
-        # Path to raw videos
-        'vidin': '/Users/mmchenry/Documents/Projects/waketracking/video/pilot_raw',
-
-        # Path to exported videos
-        'vidout': '/Users/mmchenry/Documents/Projects/waketracking/video/pilot_compressed'
-        }
-
+    # Matt on Linux
     elif platform.system() == 'Linux' and os.path.isdir('/home/mmchenry/'):
 
-        paths = {
-        # Path to kineKit code
-        'kinekit': '/home/mmchenry/code/kineKit',
+        root_code = '/home/mmchenry/code'
+        root_proj = '/home/mmchenry/Documents/wake_tracking'
 
-        # Path to experiment catalog file
-        'cat': '/home/mmchenry/Documents/wake_tracking/expt_catalog.csv',
-
-        # Path to output data
-        'data': '/home/mmchenry/Documents/wake_tracking/data/',
-
-        # Path to raw videos
-        'vidin': '/home/mmchenry/Documents/wake_tracking/video/pilot_raw',
-
-        # Path to exported videos
-        'vidout': '/home/mmchenry/Documents/wake_tracking/video/pilot_compressed'
-        }
-
+    # Catch alternatives
     else:
         raise ValueError('Do not recognize this account -- add lines of code to define paths here')
 
+    # Directory structure wrt root folders
+    paths = {
+        # Path to kineKit code
+        'kinekit':  root_code + os.sep + 'kineKit', 
+
+        # Path to experiment catalog file
+        'cat': root_proj + os.sep + 'experiment_log.csv', 
+
+        # Path to experiment catalog file
+        'data': root_proj + os.sep + 'data',
+
+        # Path to raw videos
+        'vidin': root_proj + os.sep + 'video' + os.sep + 'raw',
+
+        # Path to exported videos
+        'vidout': root_proj + os.sep + 'video' + os.sep + 'compressed',
+
+        # Mask file
+        'mask': root_proj + os.sep + 'masks',
+
+        # Temporary video
+        'tmp': root_proj + os.sep + 'video' + os.sep + 'tmp'
+        }
 
     return paths

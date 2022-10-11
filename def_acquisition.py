@@ -4,7 +4,7 @@ import cv2 as cv
 import numpy as np
 import pandas as pd
 import os
-
+import def_definepaths as dd
 
 
 def measure_pixintensity(cat, data_path, vid_path):
