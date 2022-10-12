@@ -1,27 +1,27 @@
-"""
-function for defining the paths for all code in the project
-"""
-
 import os
 import platform
 
-def give_paths():
+def give_paths(root_code=None, root_proj=None):
+    """
+    function for defining the paths for all code in the project
+    """
 
-    # These are the paths on Matt's laptop
-    if platform.system() == 'Darwin' and os.path.isdir('/Users/mmchenry/'):
+    if (root_code==None) or (root_proj==None):
+        # These are the paths on Matt's laptop
+        if platform.system() == 'Darwin' and os.path.isdir('/Users/mmchenry/'):
 
-        root_code = '/Users/mmchenry/Documents/code'
-        root_proj = '/Users/mmchenry/Documents/Projects/waketracking'
+            root_code = '/Users/mmchenry/Documents/code'
+            root_proj = '/Users/mmchenry/Documents/Projects/waketracking'
 
-    # Matt on Linux
-    elif platform.system() == 'Linux' and os.path.isdir('/home/mmchenry/'):
+        # Matt on Linux
+        elif platform.system() == 'Linux' and os.path.isdir('/home/mmchenry/'):
 
-        root_code = '/home/mmchenry/code'
-        root_proj = '/home/mmchenry/Documents/wake_tracking'
+            root_code = '/home/mmchenry/code'
+            root_proj = '/home/mmchenry/Documents/wake_tracking'
 
-    # Catch alternatives
-    else:
-        raise ValueError('Do not recognize this account -- add lines of code to define paths here')
+        # Catch alternatives
+        else:
+            raise ValueError('Do not recognize this account -- add lines of code to define paths here')
 
     # Directory structure wrt root folders
     paths = {

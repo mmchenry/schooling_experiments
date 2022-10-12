@@ -78,20 +78,22 @@ yC = y_roi + h_roi/2
 dims = (int(np.ceil(w_roi/2)), int(np.ceil(h_roi/2)))
 cntr = (int(x_roi + w_roi/2), int(y_roi + h_roi/2))
 
+# Make im a gray field
+im = int(256/2) + 0*im
+
 # Define transparent image for mask
+# im = cv.ellipse(im, cntr, dims, angle=0, startAngle=0, endAngle=360, color=(0,0,255),thickness=3)
 im = cv.ellipse(im, cntr, dims, angle=0, startAngle=0, endAngle=360, color=(255,255,255),thickness=-1)
 trans_img = int(255/3) * np.ones((im.shape[0], im.shape[1], 4), dtype=np.uint8)
+# trans_img = int(255) * np.ones((im.shape[0], im.shape[1], 4), dtype=np.uint8)
 trans_img[np.where(np.all(im[..., :3] == 255, -1))] = 0
 
-# Write mask file to disk
-while True:
-    filename = input('What filename do you want to use for the mask?')
-    if os.path.isfile(path['mask'] + os.sep + filename + '.png'):
-        print('The filename ' + filename + ' already exists. Try again.')
-    else:
-        cv.imwrite(path['mask'] + os.sep + filename + '.png', trans_img)
-        print('Mask file saved: ' + path['mask'] + os.sep + filename + '.png')
-        break
+# Filename for frame of current sequence
+filename = cat.date[vid_index] + '_' + format(cat.exp_num[vid_index],'03') + '_mask'
+
+# Write mask image to disk
+cv.imwrite(path['mask'] + os.sep + filename + '.png', trans_img)
+# cv.imwrite(path['mask'] + os.sep + filename + '.png', im)
 
 
 #%%
@@ -165,11 +167,9 @@ da.measure_pixintensity(cat, path['data'], path['vidout'])
 """ Plot pixel intensity for each video analyzed 
 -----------------------------------------------------------------------------------------------------
 """
-
 import pandas as pd
 import glob
 import plotly.express as px
-
 
 # path = os.getcwd()
 csv_files = glob.glob(os.path.join(path['data'], "*.pixelintensity"))
@@ -224,29 +224,8 @@ def slow_power(x, i=5):
 
 # %time  [slow_power(i, 5) for i in range(10)]
 
-
-
 res = direct_view.map(slow_power, range(10))
 %time res.result()
-
-# task_durations = [1] * 25
-# # request a cluster
-# with ipp.Cluster() as rc:
-#     # get a view on the cluster
-#     view = rc.load_balanced_view()
-#     # submit the tasks
-#     asyncresult = view.map_async(time.sleep, task_durations)
-#     # wait interactively for results
-#     asyncresult.wait_interactive()
-#     # retrieve actual results
-#     result = asyncresult.get()
-# at this point, the cluster processes have been shutdown
-
-
-
-
-
-
 
     # Run these lines at the iPython interpreter when developing the module code
 # %load_ext autoreload
@@ -280,8 +259,6 @@ def slow_power(x):
     os.system('pwd')
     return x**d[x]
 
-
-
 # direct_view["i"] = 10
 
 direct_view["d"] = [0, 10, 12, 20, 21, 22, 33, 1]
@@ -304,4 +281,20 @@ for n in range(len(direct_view)):
 
 # res = direct_view.map(slow_power, range(10))
 # %time res.result()
+# %%
+""" Generating dv movies for TRex """
+
+
+# Extract experiment catalog info
+cat = af.get_cat_info(path['cat'])
+
+# Loop thru each video listed in cat
+for c_row in cat.index:
+
+    fullpath = path['vidout'] + os.sep + cat.video_filename[c_row] + '.mp4'
+
+    command = f'tgrabs -i'
+
+    os.system(command)
+
 # %%

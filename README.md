@@ -1,6 +1,12 @@
 # wake_tracking
 
-Code for running code through the wake-tracking project, which tests whether some fish species can follow the wake of neighboring fish in the dark. The execution of code is controlled by the "experiment_log" spreadsheet, which you will need to export from Google Sheets as a .csv file and save in the 
+Code for running code through the wake-tracking project, which tests whether some fish species can follow the wake of neighboring fish in the dark. 
+The execution of code is controlled by the "experiment_log" spreadsheet, which you will need to export from Google Sheets as a .csv file and save in the root directory for the project.
+
+# Virtual environment
+
+You will want to create a conda environment for executing the code. 
+Start by setting up the environment, as instructured for [TRex](https://trex.run/docs/install.html), and then install packages that are called by the code with the import function.
 
 # Directory structure
 
@@ -16,8 +22,6 @@ The code assumes the following directory structure:
     * "masks" - *Directory holding image files used for masking compressed videos.*    
 * "wake_tracking" [root_code] - *Directory for the project code repository. Does not need to be anywhwere close to the "waketracking" [root_code].*
 * "kineKit" - *Directory holding the kineKit repository. Must reside in same parent directory as "wake_tracking".*
-
-Note that when this is set up on a new machine (or new user), you need to add and push code to the 'give_paths' function in the def_definepaths.py file, within the wake_tracking directory. This will allow the code to find all of the data and video files for the project.
 
 
 # Acquisition
