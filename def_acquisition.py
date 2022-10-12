@@ -15,8 +15,6 @@ def measure_pixintensity(cat, data_path, vid_path):
     data_path: path to directory where data should be saved
     vid_path: Path to video files
     """
-    
-    # TODO: Figure how to do this with multiprocessing
 
     # Loop thru each video listed in cat
     for c_row in cat.index:

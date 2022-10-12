@@ -188,6 +188,63 @@ for c_row in cat.index:
     fig = px.line(df,x="time_s", y="meanpixval", title=exp_name)
     fig.show()
 
+# %%
+"""" Play with parallel processing 
+from https://coderzcolumn.com/tutorials/python/ipyparallel-parallel-processing-in-python
+-----------------------------------------------------------------------------------------------------
+"""
+# At the command line, enter the following command to start a IPython Cluster (for 8 nodes):
+# ipcluster start -n 8
+
+import time
+import ipyparallel as ipp
+import sys
+import os
+
+print("Python Version : ", sys.version)
+print("IPyparallel Version : ", ipp.__version__)
+
+client = ipp.Client()
+type(client), client.ids
+
+load_balanced_view = client.load_balanced_view()
+
+direct_view = client[:]
+
+def slow_power(x, i=5):
+    import time
+    time.sleep(1)
+    return x**i
+
+# res = direct_view.apply(slow_power, 5,5)
+# %time res.result()
+
+# res = client[0].apply(slow_power, 4, 4)
+# %time res.result()
+
+# %time  [slow_power(i, 5) for i in range(10)]
+
+
+
+res = direct_view.map(slow_power, range(10))
+%time res.result()
+
+# task_durations = [1] * 25
+# # request a cluster
+# with ipp.Cluster() as rc:
+#     # get a view on the cluster
+#     view = rc.load_balanced_view()
+#     # submit the tasks
+#     asyncresult = view.map_async(time.sleep, task_durations)
+#     # wait interactively for results
+#     asyncresult.wait_interactive()
+#     # retrieve actual results
+#     result = asyncresult.get()
+# at this point, the cluster processes have been shutdown
+
+
+
+
 
 
 
@@ -196,3 +253,55 @@ for c_row in cat.index:
 # %autoreload 2
 # Use this to check version update
 # af.report_version()
+
+# %%
+"""" Play with parallel processing (modified)
+"""
+
+import time
+import ipyparallel as ipp
+import sys
+import os
+import pandas as pd
+
+# print("Python Version : ", sys.version)
+# print("IPyparallel Version : ", ipp.__version__)
+
+client = ipp.Client()
+type(client), client.ids
+
+# load_balanced_view = client.load_balanced_view()
+
+direct_view = client[:]
+
+def slow_power(x):
+    import time, os
+    time.sleep(1)
+    os.system('pwd')
+    return x**d[x]
+
+
+
+# direct_view["i"] = 10
+
+direct_view["d"] = [0, 10, 12, 20, 21, 22, 33, 1]
+
+res = []
+for n in range(len(direct_view)):
+    res.append(client[n].apply(slow_power, n))
+
+[r.result() for r in res]
+
+# res = direct_view.apply(slow_power, 5,5)
+# %time res.result()
+
+# res = client[0].apply(slow_power, 4, 4)
+# %time res.result()
+
+# %time  [slow_power(i, 5) for i in range(10)]
+
+
+
+# res = direct_view.map(slow_power, range(10))
+# %time res.result()
+# %%
