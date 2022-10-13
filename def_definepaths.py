@@ -41,7 +41,7 @@ def give_paths(root_code=None, root_proj=None):
         'vidout': root_proj + os.sep + 'video' + os.sep + 'compressed',
 
         # Path to exported videos
-        'viddv': root_proj + os.sep + 'video' + os.sep + 'dv',
+        'vidpv': root_proj + os.sep + 'video' + os.sep + 'pv',
 
         # Mask file
         'mask': root_proj + os.sep + 'masks',

@@ -338,7 +338,7 @@ for c_row in cat.index:
         raise OSError('File does not exist: ' + path_in)
 
     # Output path
-    path_out = path['viddv'] + os.sep + cat.video_filename[c_row] + '.mp4'
+    path_out = path['vidpv'] + os.sep + cat.video_filename[c_row] + '.mp4'
 
     # Start formulating the TGrabs command
     command = f'tgrabs -i {path_in} -o {path_out} '
