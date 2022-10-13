@@ -6,15 +6,22 @@ The execution of code is controlled by the "experiment_log" spreadsheet, which y
 # Virtual environment
 
 You will want to create a conda environment for executing the code. 
-Start by setting up the environment, as instructured for [TRex](https://trex.run/docs/install.html), and then install packages that are called by the code with the import function.
+Start by setting up the environment, as instructured for [TRex](https://trex.run/docs/install.html).
+In most situations, this amounts to running the following command at the terminal:
 
-Packages to install include the following:
+> conda create -n tracking -c trexing trex
+
+You will then want to active the new environment:
+
+> conda activate tracking
+
+You will then want to install packages into that environment that are called by our code. These can be installed as follows:
 
 > pip install ipyparallel jupyter numpy matplotlib pandas
 
 And the following:
 
->  conda install -c conda-forge opencv.
+>  conda install -c conda-forge opencv
 
 For my M1 Mac, I had to install the [openblas package](https://stackoverflow.com/questions/70242015/python-how-to-solve-the-numpy-importerror-on-apple-silicon). 
 After reinstalling numpy, I then had to reinstall TRex (conda install -c trexing trex).

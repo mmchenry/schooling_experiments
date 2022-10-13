@@ -54,17 +54,20 @@ import cv2 as cv
 import numpy as np
 import videotools as vt
 
-# Extract experiment catalog info
-cat = af.get_cat_info(path['cat'])
-
 # Index of video in cat list to extract video
 vid_index = 0
 
-# Define path
+# Extract experiment catalog info
+cat = af.get_cat_info(path['cat'])
+
+# Define path to raw video
 full_path = path['vidin'] + os.sep + cat.video_filename[vid_index] + '.' + vid_ext_raw
 
 # Extract video frame 
 im = vt.get_frame(full_path)
+
+# Make frame a gray field
+im = int(256/2) + 0*im
 
 # Extract roi coordinates
 x_roi = float(cat.roi_x[vid_index])
@@ -76,22 +79,34 @@ yC = y_roi + h_roi/2
 dims = (int(np.ceil(w_roi/2)), int(np.ceil(h_roi/2)))
 cntr = (int(x_roi + w_roi/2), int(y_roi + h_roi/2))
 
-# Make im a gray field
-im = int(256/2) + 0*im
-
-# Define transparent image for mask
-# im = cv.ellipse(im, cntr, dims, angle=0, startAngle=0, endAngle=360, color=(0,0,255),thickness=3)
+# Define circular image for mask
 im = cv.ellipse(im, cntr, dims, angle=0, startAngle=0, endAngle=360, color=(255,255,255),thickness=-1)
-trans_img = int(255/3) * np.ones((im.shape[0], im.shape[1], 4), dtype=np.uint8)
-# trans_img = int(255) * np.ones((im.shape[0], im.shape[1], 4), dtype=np.uint8)
+
+# Start transparent image as a bunch of opaque white pixels
+trans_img = int(255)*np.ones((im.shape[0], im.shape[1], 4), dtype=np.uint8)
+
+# Make pixels around circle opaque gray
+trans_img[:,:,0] = int(256/2)
+trans_img[:,:,1] = int(256/2)
+trans_img[:,:,2] = int(256/2)
+
+# Set opacity (4th channel in image) to zero at white circle pixels in im
 trans_img[np.where(np.all(im[..., :3] == 255, -1))] = 0
 
 # Filename for frame of current sequence
-filename = cat.date[vid_index] + '_' + format(cat.exp_num[vid_index],'03') + '_mask'
+filename = cat.date[vid_index] + '_' + format(cat.trial_num[vid_index],'03') + '_mask'
+
+# Output mask file
+mask_path = path['mask'] + os.sep + filename + '.png'
 
 # Write mask image to disk
-cv.imwrite(path['mask'] + os.sep + filename + '.png', trans_img)
-# cv.imwrite(path['mask'] + os.sep + filename + '.png', im)
+result = cv.imwrite(mask_path, trans_img)
+# result = cv.imwrite(mask_path, im)
+
+if result is False:
+    print('Saving mask image the following path failed: ' + mask_path)
+else:
+    print('Mask image saved to: ' + mask_path)
 
 
 # %%
