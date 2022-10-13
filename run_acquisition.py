@@ -351,3 +351,15 @@ for c_row in cat.index:
     os.system(command)
 
 # %%
+""" Running TRex """
+
+
+c_row = 0
+
+path_in = path['vidpv'] + os.sep + cat.video_filename[c_row] + '.pv'
+
+command = f'trex -i {path_in} -python_path \'/Users/mmchenry/miniforge3/envs/track/bin/python3.9\' '
+
+os.system(command)
+
+# %%
