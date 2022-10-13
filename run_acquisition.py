@@ -6,6 +6,8 @@
 import sys
 import os
 import def_definepaths as dd
+import numpy as np
+# import pandas as pd
 
 # Get paths (specific to system running code)
 path = dd.give_paths()
@@ -21,10 +23,6 @@ cat = af.get_cat_info(path['cat'])
 
 # Raw video extension
 vid_ext_raw = 'MOV'
-
-# TODO: Make ability to interactively select elliptical ROI from a single video frame
-# TODO: Save PNG image to serve as mask from elliptical shape
-# TODO: Add column to spreadsheet for saving mask image filename, so masks can be reused
 
 
 # %% 
@@ -96,18 +94,60 @@ cv.imwrite(path['mask'] + os.sep + filename + '.png', trans_img)
 # cv.imwrite(path['mask'] + os.sep + filename + '.png', im)
 
 
+# %%
+
+def batch_command(cmds):
+    """ Runs a series of command-line instructions (in cmds dataframe) in parallel """
+
+    import ipyparallel as ipp
+    import subprocess
+
+    # Set up clients 
+    client = ipp.Client()
+    type(client), client.ids
+
+    # Direct view allows shared data (balanced_view is the alternative)
+    direct_view = client[:]
+
+    # Function to execute the code
+    def run_command(idx):
+        import os
+        output = os.system(cmds_run.command[idx])
+        # output = subprocess.run(cmds_run.command[idx], capture_output=True)
+        # result = output.stdout.decode("utf-8")
+        return output
+        # return idx
+
+    direct_view["cmds_run"] = cmds
+
+    res = []
+    for n in range(len(direct_view)):
+        res.append(client[n].apply(run_command, n))
+    
+    return res
+
+
 #%%
 """ Uses kineKit to crop and compress video from catalog parameters 
 -----------------------------------------------------------------------------------------------------
 """
+# Extract experiment catalog info
+cat = af.get_cat_info(path['cat'])
 
 # Make the masked videos (stored in 'tmp' directory)
 print(' ')
 print('=====================================================')
 print('First, creating masked videos . . .')
-af.convert_masked_videos(cat, in_path=path['vidin'], out_path=path['tmp'], maskpath=path['mask'], vmode=False, imquality=1)
+cmds = af.convert_masked_videos(cat, in_path=path['vidin'], out_path=path['tmp'], 
+            maskpath=path['mask'], vmode=False, imquality=1, para_mode=False, echo=False)
+
+# Run FFMPEG commands in parallel
+results = batch_command(cmds)
+
+print(results)
 
 
+# %%
 # Make the downsampled/cropped videos  (stored in 'pilot_compressed' directory)
 print(' ')
 print('=====================================================')
@@ -145,7 +185,6 @@ for c_row in cat.index:
         # Delete temp file
         if os.path.isfile(vid_tmp_path):
             os.remove(vid_tmp_path)
-
 
 #%%
 """ Acquire the pixel intensity from movies in cat 
@@ -282,19 +321,33 @@ for n in range(len(direct_view)):
 # res = direct_view.map(slow_power, range(10))
 # %time res.result()
 # %%
-""" Generating dv movies for TRex """
-
+""" Generating dv movies for TRex using TGrabs """
 
 # Extract experiment catalog info
 cat = af.get_cat_info(path['cat'])
 
+# List of parameter headings in experiment_log that are to be passed to TGrabs
+param_list = ['threshold']
+
 # Loop thru each video listed in cat
 for c_row in cat.index:
 
-    fullpath = path['vidout'] + os.sep + cat.video_filename[c_row] + '.mp4'
+    # Define and check input path
+    path_in = path['vidout'] + os.sep + cat.video_filename[c_row] + '.mp4'
+    if not os.path.isfile(path_in):
+        raise OSError('File does not exist: ' + path_in)
 
-    command = f'tgrabs -i'
+    # Output path
+    path_out = path['viddv'] + os.sep + cat.video_filename[c_row] + '.mp4'
 
+    # Start formulating the TGrabs command
+    command = f'tgrabs -i {path_in} -o {path_out} '
+
+    # Loop thru each parameter value included in cat
+    for param_c in param_list:
+        command += '-' + str(param_c) + ' ' + str(cat[param_c][0])
+
+    # Execute at the command line
     os.system(command)
 
 # %%
