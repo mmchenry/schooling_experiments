@@ -369,12 +369,33 @@ for c_row in cat.index:
 """ Running TRex """
 
 
-c_row = 0
+# Extract experiment catalog info
+cat = af.get_cat_info(path['cat'])
 
-path_in = path['vidpv'] + os.sep + cat.video_filename[c_row] + '.pv'
+# List of parameter headings in experiment_log that are to be passed to TGrabs
+param_list = ['track_max_individuals']
 
-command = f'trex -i {path_in} -python_path \'/Users/mmchenry/miniforge3/envs/track/bin/python3.9\' '
+# Loop thru each video listed in cat
+for c_row in cat.index:
 
-os.system(command)
+    # Define and check input path
+    path_in = path['vidpv'] + os.sep + cat.video_filename[c_row] + '.pv'
+    if not os.path.isfile(path_in):
+        raise OSError('Video file does not exist: ' + path_in)
+    
+    # Where data will be saved
+    data_path = path['data'] 
+
+    # Start formulating the TGrabs command
+    command = f'trex -i {path_in} -output_dir {data_path}'
+
+    # Loop thru each parameter value included in cat
+    for param_c in param_list:
+        command += '-' + str(param_c) + ' ' + str(cat[param_c][0])
+
+    # Execute at the command line
+    # result = os.system(command)
+
+    print(command)
 
 # %%

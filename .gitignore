@@ -129,3 +129,4 @@ dmypy.json
 .pyre/
 .idea/workspace.xml
 .idea/other.xml
+.idea/._idea/workspace.xml
