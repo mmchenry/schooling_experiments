@@ -80,3 +80,50 @@ def measure_pixintensity(cat, data_path, vid_path):
 
         # Turn off connection to video file
         cv.destroyAllWindows()
+
+
+def raw_to_mat(cat):
+    """ Convert all npz files for an experiment to mat files.
+
+    cat - Catalog of experiments to convert
+    """
+    from scipy.io import savemat
+    import glob
+
+    # Get paths (specific to system running code)
+    path = dd.give_paths() 
+
+    # Loop thru each experiment
+    for expt_c in cat.video_filename:
+
+        # Paths for raw data files for current experiment
+        path_c = path['data_raw'] + os.sep + expt_c + '*' + 'npz'
+
+        # Get all npz filenames for current experiment
+        raw_files = glob.glob(path_c)
+
+        # Report, if no matches
+        if raw_files==[]:
+            print('WARNING: No raw data files match: ' + path_c)
+
+        # Otherwise, convert
+        else:
+            # Loop thru each raw file
+            for raw_c in raw_files:
+
+                # Load contents of npz file
+                b = np.load(raw_c)
+
+                # Transfer all data to a dictionary
+                dict_c = {}
+                for field_c in b.files:
+                    dict_c[field_c] = b[field_c]
+
+                # Path for current mat file
+                out_path = path['data_raw'] + os.sep + os.path.basename(raw_c)[:-4] + '.mat'
+
+                # Save dictionary data to a mat file
+                savemat(out_path, dict_c)
+
+                # Report conversion
+                print('Data export: ' + out_path)

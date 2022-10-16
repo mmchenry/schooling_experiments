@@ -32,8 +32,9 @@ The code assumes the following directory structure:
 
 * "waketracking" [root_proj] - *Directory holding all videos and data.*
     * "experiment_log.csv" - *Experiment catalog, downloaded from google sheets.*
-    * "data" - *Directory holding the data generated from the videos.*
-    * "video" - *Directory holding video files.*
+    * "data" 
+        * "raw" - *Directory holding the data generated from the videos by TRex.*
+    * "video" 
         * "raw" - *Directory holding the recordings from pilot experiments.*
         * "compressed" - *Code will generate compressed mp4 videos here.*
         * "tmp" - *Directory that generates temporary video files while compressing videos.*

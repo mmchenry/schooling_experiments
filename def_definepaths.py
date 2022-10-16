@@ -32,7 +32,7 @@ def give_paths(root_code=None, root_proj=None):
         'cat': root_proj + os.sep + 'experiment_log.csv', 
 
         # Path to experiment catalog file
-        'data_raw': root_proj + os.sep + 'data_raw',
+        'data_raw': root_proj + os.sep + 'data' + os.sep + 'raw',
 
         # Path to raw videos
         'vidin': root_proj + os.sep + 'video' + os.sep + 'raw',
