@@ -368,7 +368,6 @@ for c_row in cat.index:
 # %%
 """ Running TRex """
 
-
 # Extract experiment catalog info
 cat = af.get_cat_info(path['cat'])
 
@@ -397,5 +396,47 @@ for c_row in cat.index:
     # result = os.system(command)
 
     print(command)
+
+# %%
+""" Working with TRex data files """
+# import pandas as pd
+from scipy.io import savemat
+import glob
+
+# Extract experiment catalog info
+cat = af.get_cat_info(path['cat'])
+
+# Loop thru each experiment
+for expt_c in cat.video_filename:
+
+    # Paths for raw data files for current experiment
+    path_c = path['data_raw'] + os.sep + expt_c + '*' + 'npz'
+
+    # Get all npz filenames for current experiment
+    raw_files = glob.glob(path_c)
+
+    # Report, if no matches
+    if raw_files==[]:
+        print('WARNING: No raw data files match: ' + path_c)
+
+    # Otherwise, convert
+    else:
+        # Loop thru each raw file
+        for raw_c in raw_files:
+
+            # Load contents of npz file
+            b = np.load(raw_c)
+
+            # Transfer all data to a dictionary
+            dict_c = {}
+            for field_c in b.files:
+                dict_c[field_c] = b[field_c]
+
+            # Path for current mat file
+            out_path = path['data_raw'] + os.sep + os.path.basename(raw_c)[:-4] + '.mat'
+
+            # Save dictionary data to a mat file
+            savemat(out_path, dict_c)
+
 
 # %%
