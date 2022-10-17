@@ -384,14 +384,16 @@ for c_row in cat.index:
         raise OSError('Video file does not exist: ' + path_in)
     
     # Where data will be saved
-    data_path = path['data'] 
+    data_path = path['data_raw'] 
+
+    # Path to settings file
+    settings_path = path["settings"] + os.sep + cat.settings_filename[c_row] + '.settings'
 
     # Start formulating the TGrabs command
-    command = f'trex -i {path_in} -output_dir {data_path}'
+    command = f'trex -i {path_in} -output_dir {data_path} -settings_file {settings_path}'
 
-    # Loop thru each parameter value included in cat
-    for param_c in param_list:
-        command += '-' + str(param_c) + ' ' + str(cat[param_c][0])
+    # For adding parameters to command
+    # command +=
 
     # Execute at the command line
     # result = os.system(command)
@@ -399,13 +401,13 @@ for c_row in cat.index:
     print(command)
 
 # %%
-""" Working with TRex data files """
+""" Export data in mat format """
 
 from scipy.io import savemat
 import glob
 
 # Extract experiment catalog info
-cat = af.get_cat_info(path['cat'])
+cat = af.get_cat_info(path['cat'], include_mode=='analyze')
 
 # Convert all npz files for an experiment to mat files.
 da.raw_to_mat(cat)

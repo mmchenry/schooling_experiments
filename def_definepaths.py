@@ -34,6 +34,9 @@ def give_paths(root_code=None, root_proj=None):
         # Path to experiment catalog file
         'data_raw': root_proj + os.sep + 'data' + os.sep + 'raw',
 
+        # Path to settings file
+        'settings': root_proj + os.sep + 'data' + os.sep + 'settings',
+
         # Path to raw videos
         'vidin': root_proj + os.sep + 'video' + os.sep + 'raw',
 

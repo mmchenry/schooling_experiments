@@ -34,6 +34,7 @@ The code assumes the following directory structure:
     * "experiment_log.csv" - *Experiment catalog, downloaded from google sheets.*
     * "data" 
         * "raw" - *Directory holding the data generated from the videos by TRex.*
+        * "settings" - *Directory holding the settings files used by TRex.*
     * "video" 
         * "raw" - *Directory holding the recordings from pilot experiments.*
         * "compressed" - *Code will generate compressed mp4 videos here.*
