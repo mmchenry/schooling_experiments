@@ -343,7 +343,9 @@ for n in range(len(direct_view)):
 cat = af.get_cat_info(path['cat'])
 
 # List of parameter headings in experiment_log that are to be passed to TGrabs
-param_list = ['threshold']
+param_list = ['threshold', 'use_adaptive_threshold', 
+              'adaptive_threshold_scale', 'dilation_size',
+              'blob_size_range']
 
 # Loop thru each video listed in cat
 for c_row in cat.index:
@@ -351,20 +353,24 @@ for c_row in cat.index:
     # Define and check input path
     path_in = path['vidout'] + os.sep + cat.video_filename[c_row] + '.mp4'
     if not os.path.isfile(path_in):
-        raise OSError('File does not exist: ' + path_in)
+        raise OSError('Video file does not exist: ' + path_in)
 
     # Output path
-    path_out = path['vidpv'] + os.sep + cat.video_filename[c_row] + '.mp4'
-
+    path_out = path['vidpv'] + os.sep + cat.video_filename[c_row] + '.pv'
     # Start formulating the TGrabs command
     command = f'tgrabs -i {path_in} -o {path_out} '
 
+    # Add additional command
+    command += '-averging_method mode '
+
     # Loop thru each parameter value included in cat
     for param_c in param_list:
-        command += '-' + str(param_c) + ' ' + str(cat[param_c][0])
+        command += '-' + str(param_c) + ' ' + str(cat[param_c][0]) + ' '
 
     # Execute at the command line
-    os.system(command)
+    # os.system(command)
+    print(command)
+
 
 # %%
 """ Running TRex """
@@ -373,7 +379,7 @@ for c_row in cat.index:
 cat = af.get_cat_info(path['cat'])
 
 # List of parameter headings in experiment_log that are to be passed to TGrabs
-param_list = ['track_max_individuals']
+param_list = ['meta_real_width']
 
 # Loop thru each video listed in cat
 for c_row in cat.index:
@@ -387,18 +393,22 @@ for c_row in cat.index:
     data_path = path['data_raw'] 
 
     # Path to settings file
-    settings_path = path["settings"] + os.sep + cat.settings_filename[c_row] + '.settings'
+    settings_path = path["settings"] + os.sep + cat.settings_file[c_row] + '.settings'
 
     # Start formulating the TGrabs command
     command = f'trex -i {path_in} -output_dir {data_path} -settings_file {settings_path}'
 
     # For adding parameters to command
-    # command +=
+    # command += '-meta_real_width '
+
+    # Loop thru each parameter value included in cat
+    for param_c in param_list:
+        command += '-' + str(param_c) + ' ' + str(cat[param_c][0]) + ' '
 
     # Execute at the command line
     # result = os.system(command)
-
     print(command)
+    
 
 # %%
 """ Export data in mat format """

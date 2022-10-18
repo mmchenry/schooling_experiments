@@ -8,16 +8,22 @@ def give_paths(root_code=None, root_proj=None):
 
     if (root_code==None) or (root_proj==None):
         # These are the paths on Matt's laptop
-        if platform.system() == 'Darwin' and os.path.isdir('/Users/mmchenry/'):
+        if (platform.system() == 'Darwin') and (os.path.expanduser('~')=='/Users/mmchenry'):
 
             root_code = '/Users/mmchenry/Documents/code'
             root_proj = '/Users/mmchenry/Documents/Projects/waketracking'
 
         # Matt on Linux
-        elif platform.system() == 'Linux' and os.path.isdir('/home/mmchenry/'):
+        elif (platform.system() == 'Linux') and (os.path.expanduser('~')=='/home/mmchenry'):
 
             root_code = '/home/mmchenry/code'
             root_proj = '/home/mmchenry/Documents/wake_tracking'
+
+        # Ashley on Linux
+        elif (platform.system() == 'Linux') and (os.path.expanduser('~')=='/home/anpetey'):
+
+            root_code = '/home/anpetey/PycharmProjects'
+            root_proj = '/vortex/schooling/waketracking'
 
         # Catch alternatives
         else:
