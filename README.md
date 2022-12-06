@@ -1,7 +1,6 @@
 # wake_tracking
 
-Code for running code through the wake-tracking project, which tests whether some fish species can follow the wake of neighboring fish in the dark. 
-The execution of code is controlled by the "experiment_log" spreadsheet, which you will need to export from Google Sheets as a .csv file and save in the root directory for the project.
+Code for running code through the wake-tracking project, which tests whether some fish species can follow the wake of neighboring fish in the dark. Here we have developed python code for controlling devices during the running of experiments and the acquisition of kinematic data from the video recordings.
 
 # Virtual environment
 
@@ -15,7 +14,24 @@ You will then want to active the new environment:
 
 > conda activate tracking
 
-You will then want to install packages into that environment that are called by our code. These can be installed as follows:
+## Running experiments
+
+For running experiments, you will need [DMXEnttecPro](https://github.com/SavinaRoja/DMXEnttecPro) for controlling a Enttec DMX USB Pro, which controls the lights. This may be installed as follows:
+
+> pip install DMXEnttecPro timer plotly playsound multiprocess
+
+And the following:
+
+> pip3 install PyObjC
+
+<!-- And the following (for macs):
+
+> brew install portaudio
+> pip install pyaudio -->
+
+## Acquiring kinematics
+
+You will then want to install packages into that environment that are called by our code. For the kinematics, these packages can be installed as follows:
 
 > pip install ipyparallel jupyter numpy matplotlib pandas
 
@@ -26,7 +42,25 @@ And the following:
 For my M1 Mac, I had to install the [openblas package](https://stackoverflow.com/questions/70242015/python-how-to-solve-the-numpy-importerror-on-apple-silicon). 
 After reinstalling numpy, I then had to reinstall TRex (conda install -c trexing trex).
 
-# Directory structure
+
+
+# Running experiments
+
+Running experiments entails video-recording the swimming of fish under controlled lighting conditions.
+
+- **[schooling_experiments.ipynb](schooling_experiments.ipynb)**: Jupyter notebook that steps through the running of experiments.
+
+- **[def_runexperiments.py](def_runexperiments.py)**: Python functions called by schooling_experiments.ipynb to run experiments.
+
+
+# Acquiring and analyzing kinematics
+
+The execution of code is controlled by the "experiment_log" spreadsheet, which you will need to export from Google Sheets as a .csv file and save in the root directory for the project.
+
+- **[acquire_kinematics.ipynb](acquire_kinematics.ipynb)**: Jupyter notebook that explains how to run the acquisition and includes the necessary code.
+
+
+## Directory structure
 
 The code assumes the following directory structure:
 
@@ -45,7 +79,7 @@ The code assumes the following directory structure:
 * "kineKit" - *Directory holding the kineKit repository. Must reside in same parent directory as "wake_tracking".*
 
 
-# Acquisition
+## Acquisition 
 
 Includes the following files: 
 
