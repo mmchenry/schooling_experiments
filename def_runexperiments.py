@@ -9,6 +9,7 @@ import pandas as pd
 import plotly.express as px
 import multiprocess
 from playsound import playsound
+import os
 
 
 def get_light_level(light_level):
@@ -87,15 +88,15 @@ def make_ramp(light_level, light_dur, ramp_dur, plot_data=False):
     
     return df    
 
-def run_program(df, dmx, aud_path):
+def run_program(df, dmx, aud_path, trig_video=True):
     """ 
     Transmits signal to control light intensity via Enttex DMX USB Pro.
-    df        - Dataframe with values for control signal and desired light intensity
-    dmx       - specifies the hardware address for the Enttex device
-    aud_path  - Path to audio file to play
+    df         - Dataframe with values for control signal and desired light intensity
+    dmx        - specifies the hardware address for the Enttex device
+    aud_path   - Path to audio file to play for timecode
+    trig_video - Whether to trigger the video via timecode audio
     """
 
-    # TODO: Add control of video cameras by playign timecode audio signal
     # Audio control described here:
     # https://stackoverflow.com/questions/57158779/how-to-stop-audio-with-playsound-module
 
@@ -107,10 +108,11 @@ def run_program(df, dmx, aud_path):
     curr_time  = 0
     end_time   = max(df.index)
 
-    p = multiprocess.Process(target=playsound, args=(aud_path))
+    if trig_video:
+        p = multiprocess.Process(target=playsound, args=(aud_path, ))
     
-    print('Starting audio . . .')
-    p.start()
+        print('Starting audio for timecode . . .')
+        p.start()
 
     # Loop until time runs out
     while curr_time<end_time:          
@@ -129,5 +131,6 @@ def run_program(df, dmx, aud_path):
 
         # Briefly pause the code to keep from overloading the hardware
         time.sleep(0.001)
-    
-    p.terminate()
+        
+    if trig_video:
+        p.terminate()

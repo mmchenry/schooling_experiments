@@ -3,16 +3,16 @@
 Code for running code through the wake-tracking project, which tests whether some fish species can follow the wake of neighboring fish in the dark. Here we have developed python code for controlling devices during the running of experiments and the acquisition of kinematic data from the video recordings.
 
 # Virtual environment
-
+You first need to install [Anaconda on your system](https://www.anaconda.com/products/distribution).
 You will want to create a conda environment for executing the code. 
 Start by setting up the environment, as instructured for [TRex](https://trex.run/docs/install.html).
 In most situations, this amounts to running the following command at the terminal:
 
-> conda create -n tracking -c trexing trex
+> conda create -n wake -c trexing trex
 
 You will then want to active the new environment:
 
-> conda activate tracking
+> conda activate wake
 
 ## Running experiments
 
