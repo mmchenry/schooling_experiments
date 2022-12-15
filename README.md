@@ -42,6 +42,31 @@ And the following:
 For my M1 Mac, I had to install the [openblas package](https://stackoverflow.com/questions/70242015/python-how-to-solve-the-numpy-importerror-on-apple-silicon). 
 After reinstalling numpy, I then had to reinstall TRex (conda install -c trexing trex).
 
+# Hardware setup
+
+## DMX controller for lights
+
+We used a Luxli ORC-Taiko-2x1 LED light source controlled with an Enttex DMX USB Pro via a 5-pin DMX cable. Details on the Python package to control this hardware (DMXEnttecPro) can be found on [github](https://github.com/SavinaRoja/DMXEnttecPro).
+
+You can first find the Enttec device by typing the folling at the terminal:
+
+> python -m DMXEnttecPro.utils
+
+which gave me the following:
+
+>/dev/cu.usbserial-EN373474 <br>
+>  name: cu.usbserial-EN373474 <br> 
+>  description: DMX USB PRO<br>
+>  hwid: USB VID:PID=0403:6001 SER=EN373474 LOCATION=0-1.1.1<br>
+>  vid: 1027<br>
+>  pid: 24577<br>
+>  serial_number: EN373474<br>
+>  location: 0-1.1.1<br>
+>  manufacturer: ENTTEC<br>
+>  product: DMX USB PRO<br>
+>  interface: None<br>
+
+The first line is what you'll want to copy and paste below to define 'hw_address', in [schooling_experiments.ipynb](schooling_experiments.ipynb).
 
 
 # Running experiments
