@@ -12,6 +12,10 @@ from playsound import playsound
 import os
 import datetime as dt
 
+# To control the smart switch
+import asyncio
+from kasa import SmartPlug
+
 
 def get_light_level(light_level):
     """ 
@@ -153,6 +157,31 @@ def run_program(dmx, aud_path, log_path, light_level, light_dur=None, ramp_dur=0
     # State experiment
     print('Experiment -- Date: ' + curr_date.strftime("%Y-%m-%d") + ', Trial number: ' + str(trial_num) + ' ----------')
 
+    async def plug_update(p):
+        await p.update(p)
+
+    async def plug_on(p):
+        await p.turn_on(p)
+
+    async def plug_off(p):
+        await p.turn_off(p)
+
+    def test(p):
+        return asyncio.run(plug_update(p))
+
+    # Connect to the smart switch, turn it on
+    p = SmartPlug("192.168.0.104")
+    # await p.update()
+    # plug_update(p)
+    # test(p)
+    # try:
+    #     plug_update(p)
+    # except:
+    #     raise ValueError("Cannot find the smart plug for the IR LEDS. Make sure you're on the right Wifi network.")
+    # plug_on(p)
+
+    # test(p)
+
     # Data to add to log
     log_data = {
         'date': [curr_date.strftime("%Y-%m-%d")],    
@@ -184,7 +213,6 @@ def run_program(dmx, aud_path, log_path, light_level, light_dur=None, ramp_dur=0
         log_data['light_level3']   = [np.nan]
         log_data['light_dur3']     = [np.nan]
         
-
     # Sets DMX channel 1 to max 255 (Channel 1 is the intensity)
     dmx.set_channel(1, 255)  
 
@@ -192,6 +220,18 @@ def run_program(dmx, aud_path, log_path, light_level, light_dur=None, ramp_dur=0
     start_time = time.time()
     curr_time  = 0
     end_time   = max(df.index)
+
+    # # Check that IR LEDs are on
+    # while LED_current<1:
+    #     await p.update()
+    #     LED_current = p.emeter_realtime.current
+    #     print(LED_current)
+    #     time.sleep(0.1)
+
+    #     # Check of timeout
+    #     curr_time = time.time() - start_time
+    #     if curr_time>3:
+    #         raise ValueError('IR LEDs failed to turn on')
 
     if trig_video:
         p = multiprocess.Process(target=playsound, args=(aud_path, ))
@@ -227,12 +267,10 @@ def run_program(dmx, aud_path, log_path, light_level, light_dur=None, ramp_dur=0
     input_str = input("Analyze experiment [(y)es or (n)o]?")
     if input_str=='y' or input_str=='Y' or input_str=='yes' or input_str=='YES':
         log_data['analyze'] = [int(1)]
-        print("     Video WILL be analyzed")
+        print("    Video WILL be analyzed")
     else:
         log_data['analyze'] = [int(0)]
         print("    Video will NOT be analyzed")
-
-    # TODO:Log video filename
 
     # Append new log entry, make new indicies, save CSV log file
     log_curr = pd.DataFrame(log_data)

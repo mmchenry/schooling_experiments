@@ -18,7 +18,7 @@ You will then want to active the new environment:
 
 For running experiments, you will need [DMXEnttecPro](https://github.com/SavinaRoja/DMXEnttecPro) for controlling a Enttec DMX USB Pro, which controls the lights. This may be installed as follows:
 
-> pip install DMXEnttecPro timer plotly playsound multiprocess
+> pip install DMXEnttecPro timer plotly playsound multiprocess python-kasa asyncio
 
 And the following:
 
@@ -68,6 +68,13 @@ which gave me the following:
 
 The first line is what you'll want to copy and paste below to define 'hw_address', in [schooling_experiments.ipynb](schooling_experiments.ipynb).
 
+## Smart switch for IR LED lights
+
+As detailed in the instructions for the [python-kasa](https://python-kasa.readthedocs.io/en/latest/cli.html) package, you can get the IP address for the IR LED power strip at the command line, like this:
+
+> kasa
+
+Make sure that you are on the same wifi network as the smart switch.
 
 # Running experiments
 
