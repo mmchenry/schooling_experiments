@@ -34,13 +34,13 @@ import videotools as vt
 import cv2 as cv
 
 # Extract experiment catalog info
-cat = af.get_cat_info(path['cat'])
+cat = af.get_cat_info(path['cat'], include_mode='make_video')
 
 # Index of video in cat list to extract video
 vid_index = 0
 
 # Define path
-full_path = path['vidin'] + os.sep + cat.video_filename[vid_index] + '.' + vid_ext_raw
+full_path = path['vidin'] + os.sep + cat.date[vid_index] + os.sep + cat.video_filename[vid_index] + '.' + vid_ext_raw
 
 # Extract frame and save to 'mask' directory
 im = vt.get_frame(full_path)
