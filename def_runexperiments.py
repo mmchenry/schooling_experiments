@@ -13,8 +13,9 @@ import os
 import datetime as dt
 
 # To control the smart switch
-import asyncio
-from kasa import SmartPlug
+# import asyncio
+# from kasa import SmartPlug
+# from unsync import unsync
 
 
 def get_light_level(light_level):
@@ -94,7 +95,7 @@ def make_ramp(light_level, light_dur, ramp_dur=0, plot_data=False):
     return df    
 
 
-def run_program(dmx, aud_path, log_path, light_level, light_dur=None, ramp_dur=0, trig_video=True, echo=False, plot_data=True, movie_prefix=None):
+def run_program(dmx, aud_path, log_path, light_level, light_dur=None, ramp_dur=0, trig_video=True, echo=False, plot_data=True, movie_prefix=None, LED_IP=None):
     """ 
     Transmits signal to control light intensity via Enttex DMX USB Pro.
     dmx          - specifies the hardware address for the Enttex device
@@ -107,6 +108,7 @@ def run_program(dmx, aud_path, log_path, light_level, light_dur=None, ramp_dur=0
     echo         - Whether to report status througout time series
     plot_data    - whether to plot the desired timing of light changes
     movie_prefix - text at the start of the video filenames
+    LED_IP       - IP address of smart switch to be controlled 
     """
 
     # Audio control described here:
@@ -157,30 +159,11 @@ def run_program(dmx, aud_path, log_path, light_level, light_dur=None, ramp_dur=0
     # State experiment
     print('Experiment -- Date: ' + curr_date.strftime("%Y-%m-%d") + ', Trial number: ' + str(trial_num) + ' ----------')
 
-    async def plug_update(p):
-        await p.update(p)
-
-    async def plug_on(p):
-        await p.turn_on(p)
-
-    async def plug_off(p):
-        await p.turn_off(p)
-
-    def test(p):
-        return asyncio.run(plug_update(p))
-
-    # Connect to the smart switch, turn it on
-    p = SmartPlug("192.168.0.104")
-    # await p.update()
-    # plug_update(p)
-    # test(p)
-    # try:
-    #     plug_update(p)
-    # except:
-    #     raise ValueError("Cannot find the smart plug for the IR LEDS. Make sure you're on the right Wifi network.")
-    # plug_on(p)
-
-    # test(p)
+    # Turn on the LEDs, wait for action to take
+    if LED_IP is not None:
+        os.system('kasa --host ' + LED_IP + ' on')
+        print('    Turning on LED array')
+        time.sleep(1)
 
     # Data to add to log
     log_data = {
@@ -221,21 +204,8 @@ def run_program(dmx, aud_path, log_path, light_level, light_dur=None, ramp_dur=0
     curr_time  = 0
     end_time   = max(df.index)
 
-    # # Check that IR LEDs are on
-    # while LED_current<1:
-    #     await p.update()
-    #     LED_current = p.emeter_realtime.current
-    #     print(LED_current)
-    #     time.sleep(0.1)
-
-    #     # Check of timeout
-    #     curr_time = time.time() - start_time
-    #     if curr_time>3:
-    #         raise ValueError('IR LEDs failed to turn on')
-
     if trig_video:
         p = multiprocess.Process(target=playsound, args=(aud_path, ))
-    
         print('    Starting audio to trigger video recording')
         p.start()
 
@@ -263,6 +233,11 @@ def run_program(dmx, aud_path, log_path, light_level, light_dur=None, ramp_dur=0
         p.terminate()
         print('    Timecode audio ended.')
 
+    # Turn off the LEDs
+    if LED_IP is not None:
+        os.system('kasa --host ' + LED_IP + ' off')
+        print('    Turning off LED array')
+
     # Prompt and record whether to analyze recording
     input_str = input("Analyze experiment [(y)es or (n)o]?")
     if input_str=='y' or input_str=='Y' or input_str=='yes' or input_str=='YES':
@@ -277,6 +252,7 @@ def run_program(dmx, aud_path, log_path, light_level, light_dur=None, ramp_dur=0
     log = log.append(log_curr)
     log.index = np.arange(len(log))
     log.to_csv(log_path, index=False)
-    
+
+    # Print results
     print("    Video filename: " + vid_filename)
     print("    Log file saved to: " + log_path)

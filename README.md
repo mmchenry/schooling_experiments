@@ -74,7 +74,7 @@ As detailed in the instructions for the [python-kasa](https://python-kasa.readth
 
 > kasa
 
-Make sure that you are on the same wifi network as the smart switch.
+Make sure that you are on the same wifi network as the smart switch and that your wifi connection is the only network connection when you run the above command (e.g., unplug ethernet). Once you have the IP address, then you can run the code with multiple network connections.
 
 # Running experiments
 
