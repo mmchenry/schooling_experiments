@@ -94,21 +94,77 @@ def make_ramp(light_level, light_dur, ramp_dur=0, plot_data=False):
     
     return df    
 
-
-def run_program(dmx, aud_path, log_path, light_level, light_dur=None, ramp_dur=0, trig_video=True, echo=False, plot_data=True, movie_prefix=None, LED_IP=None):
-    """ 
-    Transmits signal to control light intensity via Enttex DMX USB Pro.
-    dmx          - specifies the hardware address for the Enttex device
+def seq_vary_rampdur(dmx, aud_path, log_path, light_level, light_dur, num_ramp=1, min_rampdur=0.1, max_rampdur=3, btwn_period=5, movie_prefix=None, LED_IP=None):
+    """
+    Runs run_program a number of times at variable ramp duration.
+    
+    dmx             - specifies the hardware address for the Enttex device
     aud_path     - Path to audio file to play for timecode
     log_path     - path to log file ("hardware_run_log.csv")
-    light_level  - array of 1 to 3 values of relative light intensity levels (0 to 1)
-    light_dur    - duration (in sec) that each light intensity is held fixed
-    ramp_dur     - duration (in sec) of transition period between each fixed intensity level
-    trig_video   - Whether to trigger the video via timecode audio
-    echo         - Whether to report status througout time series
-    plot_data    - whether to plot the desired timing of light changes
-    movie_prefix - text at the start of the video filenames
-    LED_IP       - IP address of smart switch to be controlled 
+    light_level     - Array of 2 light levels for the start and end of the experiment
+    light_dur       - Array of 2 durations, before and after the ramp (s)
+    num_ramp        - number of ramp experiments to run
+    min_rampdur     - Shortest ramp duration (s)
+    max_rampdur     - Max ramp duration (s)
+    btwn_period     - Duration between experiments (min)
+    movie_prefix    - text at the start of the video filenames
+    LED_IP          - IP address of smart switch to be controlled 
+    """
+
+    
+
+    # Arary of ramp durations with even interval, in random order
+    ramp_durs = np.linspace(min_rampdur, max_rampdur, num_ramp)
+    np.random.shuffle(ramp_durs)
+
+    # Total duration of experiments (s)
+    tot_dur = num_ramp*(np.sum(light_dur)) + np.sum(ramp_durs) + num_ramp*btwn_period*60 + 5*num_ramp
+
+    # report finishing time (with formatting)
+    end_time = (dt.datetime.now() + dt.timedelta(seconds=tot_dur)).strftime('%H:%M')
+    print('Running sequence of experiments')
+    print('======================================================================================')
+    print('Experiments will be completed at ' + end_time)
+
+    # Loop thru ramp durations
+    for ramp_dur in ramp_durs:
+
+        # Report status
+        present_time = (dt.datetime.now()).strftime('%H:%M')
+        print(' ')
+        print(' ')
+        print('Experiment start, ' + present_time + ': with ' + str(round(ramp_dur, 2)) + ' s ramp')
+        print('------------------------------------------------------------------------')
+        print(' ')
+
+        # Play control levels into Enttec DMX
+        run_program(dmx, aud_path=aud_path, log_path=log_path, light_level=light_level, 
+            light_dur=light_dur, ramp_dur=np.array([ramp_dur]), trig_video=True, echo=False, plot_data=False,
+            movie_prefix=movie_prefix, LED_IP=LED_IP, analyze_prompt=False)
+        
+        # Pause before next experiment
+        print('Now waiting ' + str(btwn_period) + ' min for the next experiment')
+        time.sleep(btwn_period*60)
+
+    print('Sequence of experiments completed.')
+    print('======================================================================================')
+
+
+def run_program(dmx, aud_path, log_path, light_level, light_dur=None, ramp_dur=0, trig_video=True, echo=False, plot_data=True, movie_prefix=None, LED_IP=None, analyze_prompt=True):
+    """ 
+    Transmits signal to control light intensity via Enttex DMX USB Pro.
+    dmx           - specifies the hardware address for the Enttex device
+    aud_path      - Path to audio file to play for timecode
+    log_path      - path to log file ("hardware_run_log.csv")
+    light_level   - array of 1 to 3 values of relative light intensity levels (0 to 1)
+    light_dur     - duration (in sec) that each light intensity is held fixed
+    ramp_dur      - duration (in sec) of transition period between each fixed intensity level
+    trig_video    - Whether to trigger the video via timecode audio
+    echo          - Whether to report status througout time series
+    plot_data     - whether to plot the desired timing of light changes
+    movie_prefix  - text at the start of the video filenames
+    LED_IP        - IP address of smart switch to be controlled 
+    analyze_prompt - Whether to ask whether to prompt to log the experiment
     """
 
     # Audio control described here:
@@ -163,7 +219,7 @@ def run_program(dmx, aud_path, log_path, light_level, light_dur=None, ramp_dur=0
     if LED_IP is not None:
         os.system('kasa --host ' + LED_IP + ' on')
         print('    Turning on LED array')
-        time.sleep(1)
+        time.sleep(5)
 
     # Data to add to log
     log_data = {
@@ -239,13 +295,17 @@ def run_program(dmx, aud_path, log_path, light_level, light_dur=None, ramp_dur=0
         print('    Turning off LED array')
 
     # Prompt and record whether to analyze recording
-    input_str = input("Analyze experiment [(y)es or (n)o]?")
-    if input_str=='y' or input_str=='Y' or input_str=='yes' or input_str=='YES':
+    if analyze_prompt:
+        input_str = input("Analyze experiment [(y)es or (n)o]?")
+        if input_str=='y' or input_str=='Y' or input_str=='yes' or input_str=='YES':
+            log_data['analyze'] = [int(1)]
+            print("    Video WILL be analyzed")
+        else:
+            log_data['analyze'] = [int(0)]
+            print("    Video will NOT be analyzed")
+    else:
         log_data['analyze'] = [int(1)]
         print("    Video WILL be analyzed")
-    else:
-        log_data['analyze'] = [int(0)]
-        print("    Video will NOT be analyzed")
 
     # Append new log entry, make new indicies, save CSV log file
     log_curr = pd.DataFrame(log_data)
