@@ -99,8 +99,8 @@ def seq_vary_rampdur(dmx, aud_path, log_path, light_level, light_dur, num_ramp=1
     Runs run_program a number of times at variable ramp duration.
     
     dmx             - specifies the hardware address for the Enttex device
-    aud_path     - Path to audio file to play for timecode
-    log_path     - path to log file ("hardware_run_log.csv")
+    aud_path        - Path to audio file to play for timecode
+    log_path        - path to log file ("hardware_run_log.csv")
     light_level     - Array of 2 light levels for the start and end of the experiment
     light_dur       - Array of 2 durations, before and after the ramp (s)
     num_ramp        - number of ramp experiments to run
@@ -111,7 +111,7 @@ def seq_vary_rampdur(dmx, aud_path, log_path, light_level, light_dur, num_ramp=1
     LED_IP          - IP address of smart switch to be controlled 
     """
 
-    
+
 
     # Arary of ramp durations with even interval, in random order
     ramp_durs = np.linspace(min_rampdur, max_rampdur, num_ramp)
@@ -148,6 +148,102 @@ def seq_vary_rampdur(dmx, aud_path, log_path, light_level, light_dur, num_ramp=1
 
     print('Sequence of experiments completed.')
     print('======================================================================================')
+
+
+def seq_vary_rampdurV2(dmx, aud_path, log_path, light_level, light_dur, num_ramp=1, min_rampdur=0.1, max_rampdur=3, btwn_period=5, btwn_dur=0,movie_prefix=None, LED_IP=None, LED_always=False):
+    """
+    Ashley's version: Runs run_program a number of times at variable ramp duration and makes recordings during the inbetween acclimation time.
+    
+    dmx             - specifies the hardware address for the Enttex device
+    aud_path        - Path to audio file to play for timecode
+    log_path        - path to log file ("hardware_run_log.csv")
+    light_level     - Array of 2 light levels for the start and end of the experiment
+    light_dur       - Array of 2 durations, before and after the ramp (s)
+    num_ramp        - number of ramp experiments to run
+    min_rampdur     - Shortest ramp duration (s)
+    max_rampdur     - Max ramp duration (s)
+    btwn_period     - Duration between experiments (min)
+    movie_prefix    - text at the start of the video filenames
+    LED_IP          - IP address of smart switch to be controlled
+    LED_always      - logical to keep IR LED on for total duration 
+    """
+
+    # check that if a between recording is desired, that the length of recording is not greater than the designated between duration
+    if btwn_dur>0 and ((btwn_dur*60) > (btwn_period*60)-2):
+        raise ValueError("length of btwn_dur should be minimum 30s less than btwn_period")
+
+    # Arary of ramp durations with even interval, in random order
+    ramp_durs = np.linspace(min_rampdur, max_rampdur, num_ramp)
+    np.random.shuffle(ramp_durs)
+
+    # Total duration of experiments (s)
+    tot_dur = num_ramp*(np.sum(light_dur)) + np.sum(ramp_durs) + num_ramp*btwn_period*60 + 5*num_ramp
+
+    # update between duration to account for any additional recording time
+    btwn_period = btwn_period*60 - btwn_dur*60
+
+    # report finishing time (with formatting)
+    end_time = (dt.datetime.now() + dt.timedelta(seconds=tot_dur)).strftime('%H:%M')
+    print('Running sequence of experiments')
+    print('======================================================================================')
+    print('Experiments will be completed at ' + end_time)
+
+
+    # turn on IR's to start the experimental series and keep them on till completely finished
+    if LED_always:
+        os.system('kasa --host ' + LED_IP + ' on')
+        print('    Turning on LED array')
+        time.sleep(5)
+        LED_status = None
+    else:
+        LED_status = LED_IP
+
+
+    # Loop thru ramp durations
+    for ramp_dur in ramp_durs:
+
+        # Report status
+        present_time = (dt.datetime.now()).strftime('%H:%M')
+        print(' ')
+        print(' ')
+        print('Experiment start, ' + present_time + ': with ' + str(round(ramp_dur, 2)) + ' s ramp')
+        print('------------------------------------------------------------------------')
+        print(' ')
+
+        # Play control levels into Enttec DMX
+        run_program(dmx, aud_path=aud_path, log_path=log_path, light_level=light_level, 
+            light_dur=light_dur, ramp_dur=np.array([ramp_dur,ramp_dur]), trig_video=True, echo=False, plot_data=False,
+            movie_prefix=movie_prefix, LED_IP=LED_status, analyze_prompt=False)
+        
+        # Pause before next experiment
+        print('Now waiting ' + str(btwn_period) + ' min for the next experiment')
+        
+        #minutes
+        time.sleep(btwn_period)
+
+        # record during the in between period, if desired (uses)
+        if btwn_dur>0:
+            # Run control program
+            run_program(dmx, aud_path=aud_path, log_path=log_path, light_level=np.array([light_level[2]]),
+                light_dur=np.array([btwn_dur*60]), trig_video=True, echo=False, plot_data=False, movie_prefix=movie_prefix, LED_IP=LED_status, analyze_prompt=False)
+
+        #minutes
+        #time.sleep(btwn_period)
+
+    # turn off IR's at the end of the full experimental series
+    if LED_always:
+
+        # Turn of IR LED array
+        os.system('kasa --host ' + LED_IP + ' off')
+        print('    Turning off LED array')
+       
+        # Turn off visible light
+        dmx.set_channel(1, int(0*255))
+        print('    Turning off visible light')  
+
+    print('Sequence of experiments completed.')
+    print('======================================================================================')
+
 
 
 def run_program(dmx, aud_path, log_path, light_level, light_dur=None, ramp_dur=0, trig_video=True, echo=False, plot_data=True, movie_prefix=None, LED_IP=None, analyze_prompt=True):
@@ -253,7 +349,7 @@ def run_program(dmx, aud_path, log_path, light_level, light_dur=None, ramp_dur=0
         log_data['light_dur3']     = [np.nan]
         
     # Sets DMX channel 1 to max 255 (Channel 1 is the intensity)
-    dmx.set_channel(1, 255)  
+    # dmx.set_channel(1, 255)  
 
     # Timer starts
     start_time = time.time()
