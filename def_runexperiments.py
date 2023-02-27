@@ -165,7 +165,6 @@ def run_experiment_schedule(dmx, aud_path, log_path, schedule_path, LED_IP=None,
     if not os.path.isfile(schedule_path):
         raise ValueError("Schedule file does not exist")
 
-
     # Read schedule file
     schedule = pd.read_csv(schedule_path)
 
@@ -208,6 +207,7 @@ def run_experiment_schedule(dmx, aud_path, log_path, schedule_path, LED_IP=None,
 
     # Set next trial number and start time for all experiments
     if date in log['date'].values:
+
         # Find the largest trial_num completed for the current date
         next_trial = int(log.loc[log['date']==date, 'trial_num'].max()) + 1
         
@@ -216,13 +216,11 @@ def run_experiment_schedule(dmx, aud_path, log_path, schedule_path, LED_IP=None,
 
     # If this is the first experiment of the day
     else:
-        # Otherwise, initialize start time
+
+        # Initialize trial number to 1
         next_trial = 1
 
-        # Set previous end to be same as start time
-        # prev_endtime_obj = starttime_obj
-
-        # next_starttime_obj is a time object equal to the sum of starttime_obj and the first start_time_min in the schedule, minus the pre_ramp_dur_sec
+        # Time for starting the next ramp, before next experiment
         next_starttime_obj = starttime_obj + dt.timedelta(minutes = schedule.loc[0, 'start_time_min']) - dt.timedelta(seconds = float(schedule.loc[0, 'pre_ramp_dur_sec']))
 
     #  Max trial number in schedule
@@ -245,7 +243,7 @@ def run_experiment_schedule(dmx, aud_path, log_path, schedule_path, LED_IP=None,
     # Run an experiment using run_program for each in trials at the time specified in the schedule column 'start_time'
     for trial in trials:
 
-        # Get variables from schedule
+        # Get variables from schedule for current trial
         light_start = schedule.loc[trial-1, 'light_start']
         light_end   = schedule.loc[trial-1, 'light_end']
         light_btwn  = schedule.loc[trial-1, 'light_btwn']
@@ -259,17 +257,17 @@ def run_experiment_schedule(dmx, aud_path, log_path, schedule_path, LED_IP=None,
         while dt.datetime.now() < next_starttime_obj:
             time.sleep(1)
 
-        # Run pre-experiment ramp
+        # Run pre-experiment ramp (not logged)
         run_program(dmx, aud_path, light_level=[light_btwn, light_start], light_dur=None, ramp_dur=pre_dur, 
             log_path=None, trig_video=True, echo=False, plot_data=False, movie_prefix=movie_prefix, LED_IP=LED_IP, 
             analyze_prompt=False, control_hw=control_hw)
 
-        # Run experiment
+        # Run experiment (logged)
         run_program(dmx, aud_path, light_level=[light_start, light_end], light_dur=[start_dur, end_dur], 
             ramp_dur=ramp_dur, log_path=log_path, trig_video=True, echo=False, plot_data=False, movie_prefix=movie_prefix, LED_IP=LED_IP, 
             analyze_prompt=False, control_hw=control_hw, scene_num=scene_num, shot_num=shot_num, take_num=take_num)
 
-        # Run post-experiment ramp
+        # Run post-experiment ramp (not logged)
         run_program(dmx, aud_path, light_level=[light_end, light_btwn], light_dur=None, ramp_dur=post_dur, 
             log_path=None, trig_video=True, echo=False, plot_data=False, movie_prefix=movie_prefix, LED_IP=LED_IP, 
             analyze_prompt=False, control_hw=control_hw)
