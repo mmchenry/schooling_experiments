@@ -445,7 +445,7 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
         if len(light_level)>1:
             log_data['ramp_dur_sec'] = ramp_dur
             log_data['light_end']    = [light_level[1]]
-            log_data['end_dur']      = [light_dur[1]]     
+            log_data['end_dur_min']  = [light_dur[1]]     
         else:
             log_data['ramp_dur_sec']   = [np.nan]
             log_data['light_end']      = [np.nan]
