@@ -257,6 +257,9 @@ def run_experiment_schedule(dmx, aud_path, log_path, schedule_path, LED_IP=None,
         while dt.datetime.now() < next_starttime_obj:
             time.sleep(1)
 
+        # print next_starttime_obj in YYYY-MM-DD,HH:MM:SS format
+        print("Starting trial {} at {}".format(trial, next_starttime_obj.strftime("%Y-%m-%d,%H:%M:%S")))
+
         # Run pre-experiment ramp (not logged)
         run_program(dmx, aud_path, light_level=[light_btwn, light_start], light_dur=None, ramp_dur=pre_dur, 
             log_path=None, trig_video=True, echo=False, plot_data=False, movie_prefix=movie_prefix, LED_IP=LED_IP, 

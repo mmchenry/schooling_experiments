@@ -4,7 +4,7 @@ import cv2 as cv
 import numpy as np
 import pandas as pd
 import os
-import def_definepaths as dd
+# import def_definepaths as dd
 
 
 def measure_pixintensity(cat, data_path, vid_path):
@@ -82,16 +82,17 @@ def measure_pixintensity(cat, data_path, vid_path):
         cv.destroyAllWindows()
 
 
-def raw_to_mat(cat):
+def raw_to_mat(cat, path):
     """ Convert all npz files for an experiment to mat files.
 
     cat - Catalog of experiments to convert
+    path - Dictionary of paths to data files
     """
     from scipy.io import savemat
     import glob
 
     # Get paths (specific to system running code)
-    path = dd.give_paths() 
+    # path = dd.give_paths() 
 
     # Loop thru each experiment
     for expt_c in cat.video_filename:
