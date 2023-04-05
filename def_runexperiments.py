@@ -177,7 +177,6 @@ def run_experiment_schedule(dmx, aud_path, log_path, schedule_path, LED_IP=None,
     # Current time (object) using 
     starttime_obj = dt.datetime.now()
 
-
     def calc_starttime(schedule, log, date, next_trial):
         """
         Finds when to start the next trial based on the schedule and log files.
@@ -188,7 +187,7 @@ def run_experiment_schedule(dmx, aud_path, log_path, schedule_path, LED_IP=None,
         """
 
         # Find start time for the last trial completed for the current date
-        done_starttime_str = log.loc[(log['date']==date) & (log['trial_num']==next_trial-1), 'start_time'].max()
+        done_starttime_str = log.loc[(log['date']==date) & (log['trial_num']==int(next_trial-1)), 'start_time'].max()
         done_starttime_obj = dt.datetime.strptime(date +',' + done_starttime_str, "%Y-%m-%d,%H:%M:%S")
 
         # Find the start time for the next trial and previous trial in the schedule
@@ -257,12 +256,12 @@ def run_experiment_schedule(dmx, aud_path, log_path, schedule_path, LED_IP=None,
         while dt.datetime.now() < next_starttime_obj:
             time.sleep(1)
 
-        # print next_starttime_obj in YYYY-MM-DD,HH:MM:SS format
-        print("Starting trial {} at {}".format(trial, next_starttime_obj.strftime("%Y-%m-%d,%H:%M:%S")))
+        # Print next_starttime_obj in YYY-MM-DD format
+        print("Starting trial {} at {}".format(trial, next_starttime_obj.strftime("%Y-%m-%d, %H:%M:%S")))
 
         # Run pre-experiment ramp (not logged)
         run_program(dmx, aud_path, light_level=[light_btwn, light_start], light_dur=None, ramp_dur=pre_dur, 
-            log_path=None, trig_video=True, echo=False, plot_data=False, movie_prefix=movie_prefix, LED_IP=LED_IP, 
+            log_path=None, trig_video=False, echo=False, plot_data=False, movie_prefix=movie_prefix, LED_IP=LED_IP, 
             analyze_prompt=False, control_hw=control_hw)
 
         # Run experiment (logged)
@@ -272,11 +271,18 @@ def run_experiment_schedule(dmx, aud_path, log_path, schedule_path, LED_IP=None,
 
         # Run post-experiment ramp (not logged)
         run_program(dmx, aud_path, light_level=[light_end, light_btwn], light_dur=None, ramp_dur=post_dur, 
-            log_path=None, trig_video=True, echo=False, plot_data=False, movie_prefix=movie_prefix, LED_IP=LED_IP, 
+            log_path=None, trig_video=False, echo=False, plot_data=False, movie_prefix=movie_prefix, LED_IP=LED_IP, 
             analyze_prompt=False, control_hw=control_hw)
         
         # Advance take number
         take_num = take_num + 1
+
+        # Load latest version of log
+        log = pd.read_csv(log_path)
+
+        # When to start the next experiment
+        if trial<np.max(trials):
+            next_starttime_obj = calc_starttime(schedule, log, date, trial+1)       
 
     return
 
@@ -365,18 +371,6 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
         else:
             trial_num = int(log.trial_num[iLog]) + 1
 
-        # State experiment
-        print('Experiment complete: ' + curr_date.strftime("%Y-%m-%d") + ', Trial number: ' + str(trial_num) + ' ----------')
-
-    # Turn on the LEDs, wait for action to take
-    if control_hw and (LED_IP is not None):
-        os.system('kasa --host ' + LED_IP + ' on')
-        print('    Turning on LED array')
-        time.sleep(5)
-   
-    # Sets DMX channel 1 to max 255 (Channel 1 is the intensity)
-    # dmx.set_channel(1, 255)  
-
     # Timer starts
     starttime_str = now.strftime("%H:%M:%S")
     start_time = time.time()
@@ -412,11 +406,6 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
     if control_hw and trig_video:
         p.terminate()
         print('    Timecode audio ended.')
-
-    # Turn off the LEDs
-    if control_hw and (LED_IP is not None):
-        os.system('kasa --host ' + LED_IP + ' off')
-        print('    Turning off LED array')
 
     # Get info about the video filename
     if (log_path!=None):
@@ -456,7 +445,7 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
         if len(light_level)>1:
             log_data['ramp_dur_sec'] = ramp_dur
             log_data['light_end']    = [light_level[1]]
-            log_data['end_dur']      = [light_dur[1]]     
+            log_data['end_dur_min']  = [light_dur[1]]     
         else:
             log_data['ramp_dur_sec']   = [np.nan]
             log_data['light_end']      = [np.nan]
@@ -485,13 +474,16 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
         # Print results
         print("    Video filename: " + vid_filename)
         print("    Log file saved to: " + log_path)
+        # State experiment
+        print('    Trial ' + str(trial_num) + ' complete!')
+        # print(' ')
 
     
 def make_ramp(light_level, light_dur=None, ramp_dur=None, plot_data=False):
     """
     Generates a time series of control_level values for changes in light light_level.
     light_level - array of 1 to 3 values of relative light intensity levels (0 to 1)
-    light_dur   - duration (in sec) that each light intensity is held fixed
+    light_dur   - duration (in min) that each light intensity is held fixed
     ramp_dur    - duration (in sec) of transition period between each fixed intensity level
     plot_data   - whether to plot the desired timing of light changes
     """
@@ -510,22 +502,22 @@ def make_ramp(light_level, light_dur=None, ramp_dur=None, plot_data=False):
     if light_dur!=None:
         # Define time vector
         dt = 1/1000
-        tot_dur = np.sum(light_dur) + np.sum(ramp_dur)
+        tot_dur = np.sum(light_dur*60) + np.sum(ramp_dur)
         time = np.linspace(0, tot_dur, int(round(tot_dur/dt)))
 
         # Make empty dataframe
         df = pd.DataFrame(columns=['light_level','control_level'], index=time, dtype='float')    
 
         # Initial light_level values
-        df.loc[df.index<=light_dur[0], 'light_level'] = light_level[0]
+        df.loc[df.index<=light_dur[0]*60, 'light_level'] = light_level[0]
 
         # Ramp
-        idx = (df.index<=(light_dur[0]+ramp_dur)) & (df.index>light_dur[0])
-        ramp_vals = (light_level[1]-light_level[0])/ramp_dur * (time[idx]-light_dur[0]) + light_level[0]
+        idx = (df.index<=(light_dur[0]*60+ramp_dur)) & (df.index>light_dur[0]*60)
+        ramp_vals = (light_level[1]-light_level[0])/ramp_dur * (time[idx]-light_dur[0]*60) + light_level[0]
         df.loc[idx, 'light_level'] = ramp_vals
 
         # Second fixed light level
-        idx = (df.index<=(light_dur[0]+ramp_dur+light_dur[1])) & (df.index>(light_dur[0]+ramp_dur))
+        idx = (df.index<=(light_dur[0]*60+ramp_dur+light_dur[1]*60)) & (df.index>(light_dur[0]*60+ramp_dur))
         df.loc[idx, 'light_level'] = light_level[1]     
 
     # If just a ramp
