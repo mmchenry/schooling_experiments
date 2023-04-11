@@ -1,7 +1,7 @@
 import os
 
 
-def give_paths(root_path, proj_name, code_path):
+def give_paths(root_path, proj_name, code_path=None):
     """
     Function for defining the subdirectories for all code in the project directory.
     """
@@ -12,10 +12,10 @@ def give_paths(root_path, proj_name, code_path):
     if not os.path.exists(proj_path):
         raise Exception('Project path does not exist: ' + proj_path)
     
-    # raise exception if code path does not exist
-    if not os.path.exists(code_path):
+    # raise exception if code_path is not None and code_path does not exist
+    if (code_path is not None) and (not os.path.exists(code_path)):
         raise Exception('Code path does not exist: ' + code_path)
-    
+  
     # add 'data' directory, if not present in proj_path
     if not os.path.exists(proj_path + os.sep + 'data'):
         os.mkdir(proj_path + os.sep + 'data')
@@ -68,8 +68,6 @@ def give_paths(root_path, proj_name, code_path):
 
     # Directory structure wrt root folders
     paths = {
-        # Path to kineKit code
-        'kinekit':  code_path + os.sep + 'kineKit', 
 
         # Path to experiment catalog file
         'cat': proj_path + os.sep + 'experiment_log.csv', 
@@ -95,6 +93,10 @@ def give_paths(root_path, proj_name, code_path):
         # Temporary video
         'tmp': proj_path + os.sep + 'video' + os.sep + 'tmp'
         }
+    
+    # add 'kinekit path to paths, if code_path is not None
+    if code_path is not None:
+        paths['kinekit'] = code_path + os.sep + 'kineKit'
 
     # give warning id experiment_log.csv is not present
     if not os.path.exists(paths['cat']):
