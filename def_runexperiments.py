@@ -91,10 +91,13 @@ def make_schedule(schedule_path, change_var=None, light_start=None, light_end=No
         for file in files:
             last_num = np.max([last_num, int(file.split('_sch')[-1].split('.')[0])])
 
+        # Next schedule number, as a string
+        nextnum_str = "{:02d}".format(last_num+1)
+
         # Add to schedule number for file name
-        filename = date + '_sch' + str(last_num + 1) 
+        filename = date + '_sch' + nextnum_str
     else:
-        filename = date + '_sch' + str(1) 
+        filename = date + '_sch' + '01' 
 
     full_path = schedule_path + os.sep + filename + '.csv'
 
@@ -165,19 +168,30 @@ def run_experiment_schedule(dmx, aud_path, log_path, schedule_path, LED_IP=None,
     if not os.path.isfile(schedule_path):
         raise ValueError("Schedule file does not exist")
 
+    # Check if log file exists
+    if not os.path.isfile(log_path):
+        # Create an empty pandas dataframe with the column headings of 'date', 'sch_num','trail_num', write to disk
+        log = pd.DataFrame(columns=['date', 'sch_num','trail_num','start_time','video_filename',
+                                'analyze','light_start','start_dur','ramp_dur','light_end',
+                                'start_dur_min','ramp_dur_sec','end_dur_min'])
+        log.to_csv(log_path, index=False)
+    else:
+        # Load recording_log
+        log = pd.read_csv(log_path)
+
     # Read schedule file
     schedule = pd.read_csv(schedule_path)
-
-    # Load recording_log
-    log = pd.read_csv(log_path)
 
     # Date from schedule filename
     date = schedule_path.split(os.sep)[-1].split('_sch')[0]
 
+    # Read two digits from schedule filename that follow 'sch'
+    sch_num = int(schedule_path.split(os.sep)[-1].split('_sch')[1].split('.')[0])
+
     # Current time (object) using 
     starttime_obj = dt.datetime.now()
 
-    def calc_starttime(schedule, log, date, next_trial):
+    def calc_starttime(schedule, log, date, sch_num, next_trial):
         """
         Finds when to start the next trial based on the schedule and log files.
         schedule   - schedule dataframe
@@ -187,31 +201,38 @@ def run_experiment_schedule(dmx, aud_path, log_path, schedule_path, LED_IP=None,
         """
 
         # Find start time for the last trial completed for the current date
-        done_starttime_str = log.loc[(log['date']==date) & (log['trial_num']==int(next_trial-1)), 'start_time'].max()
-        done_starttime_obj = dt.datetime.strptime(date +',' + done_starttime_str, "%Y-%m-%d,%H:%M:%S")
+        done_starttime_str = log.loc[(log['date']==date) & (log['sch_num']==sch_num) & (log['trial_num']==int(next_trial-1)), 'start_time'].max()
+        done_starttime_obj = dt.datetime.strptime(date + ',' + done_starttime_str, "%Y-%m-%d,%H:%M:%S")
 
         # Find the start time for the next trial and previous trial in the schedule
-        next_starttime_min = schedule.loc[schedule['trial_num']==next_trial, 'start_time_min'].values[0]
-        prev_starttime_min = schedule.loc[schedule['trial_num']==next_trial-1, 'start_time_min'].values[0]
+        next_starttime_min  = schedule.loc[schedule['trial_num']==next_trial, 'start_time_min'].values[0]
+        prev_starttime_min  = schedule.loc[schedule['trial_num']==next_trial-1, 'start_time_min'].values[0]
         next_ramp_start_sec = schedule.loc[schedule['trial_num']==next_trial, 'pre_ramp_dur_sec'].values[0]
 
         # Next start time is the sum of done_starttime_obj and the difference between next_starttime_obj and prev_starttime_obj
         next_starttime_obj = done_starttime_obj + dt.timedelta(minutes = (next_starttime_min - prev_starttime_min)) - dt.timedelta(seconds = float(next_ramp_start_sec))
-        
+
+        # if next_starttime_obj is earlier than current time, then start immediately instead
+        if next_starttime_obj < dt.datetime.now():
+            next_starttime_obj = starttime_obj 
+
         return next_starttime_obj
 
     # Check that date matches today's date
     if date != dt.datetime.now().strftime("%Y-%m-%d"):
         raise ValueError("Schedule file is not for today and the code assumes that it is.")
 
+    # find match of date in log['date'].values and sch_num in log['sch_num'].values
+    matching_log = log[(log['date']==date) & (log['sch_num']==sch_num)]
+
     # Set next trial number and start time for all experiments
-    if date in log['date'].values:
+    if len(matching_log) > 0:
 
         # Find the largest trial_num completed for the current date
-        next_trial = int(log.loc[log['date']==date, 'trial_num'].max()) + 1
+        next_trial = int(log.loc[(log['date']==date) & (log['sch_num']==sch_num), 'trial_num'].max()) + 1
         
         # When to start the next experiment
-        next_starttime_obj = calc_starttime(schedule, log, date, next_trial)       
+        next_starttime_obj = calc_starttime(schedule, log, date, sch_num, next_trial)       
 
     # If this is the first experiment of the day
     else:
@@ -237,6 +258,7 @@ def run_experiment_schedule(dmx, aud_path, log_path, schedule_path, LED_IP=None,
         # DMX channel 1 to max 255
         dmx.set_channel(1, int(schedule.loc[trials[0], 'light_btwn']*255))  
 
+    # Initial take number
     take_num = take_num_start
 
     # Run an experiment using run_program for each in trials at the time specified in the schedule column 'start_time'
@@ -262,17 +284,17 @@ def run_experiment_schedule(dmx, aud_path, log_path, schedule_path, LED_IP=None,
         # Run pre-experiment ramp (not logged)
         run_program(dmx, aud_path, light_level=[light_btwn, light_start], light_dur=None, ramp_dur=pre_dur, 
             log_path=None, trig_video=False, echo=False, plot_data=False, movie_prefix=movie_prefix, LED_IP=LED_IP, 
-            analyze_prompt=False, control_hw=control_hw)
+            analyze_prompt=False, control_hw=control_hw, sch_num=sch_num, trial_num=trial)
 
         # Run experiment (logged)
         run_program(dmx, aud_path, light_level=[light_start, light_end], light_dur=[start_dur, end_dur], 
             ramp_dur=ramp_dur, log_path=log_path, trig_video=True, echo=False, plot_data=False, movie_prefix=movie_prefix, LED_IP=LED_IP, 
-            analyze_prompt=False, control_hw=control_hw, scene_num=scene_num, shot_num=shot_num, take_num=take_num)
+            analyze_prompt=False, control_hw=control_hw, scene_num=scene_num, shot_num=shot_num, take_num=take_num, sch_num=sch_num, trial_num=trial)
 
         # Run post-experiment ramp (not logged)
         run_program(dmx, aud_path, light_level=[light_end, light_btwn], light_dur=None, ramp_dur=post_dur, 
             log_path=None, trig_video=False, echo=False, plot_data=False, movie_prefix=movie_prefix, LED_IP=LED_IP, 
-            analyze_prompt=False, control_hw=control_hw)
+            analyze_prompt=False, control_hw=control_hw, sch_num=sch_num, trial_num=trial)
         
         # Advance take number
         take_num = take_num + 1
@@ -282,14 +304,14 @@ def run_experiment_schedule(dmx, aud_path, log_path, schedule_path, LED_IP=None,
 
         # When to start the next experiment
         if trial<np.max(trials):
-            next_starttime_obj = calc_starttime(schedule, log, date, trial+1)       
+            next_starttime_obj = calc_starttime(schedule, log, date, sch_num, trial+1)       
 
     return
 
 
 def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_path=None, trig_video=True, 
         echo=False, plot_data=True, movie_prefix=None, LED_IP=None, analyze_prompt=True, control_hw=True, 
-        scene_num=1, shot_num=1, take_num=1):
+        scene_num=1, shot_num=1, take_num=1, sch_num=999, trial_num=0):
     """ 
     Transmits signal to control light intensity via Enttex DMX USB Pro.
     dmx            - specifies the hardware address for the Enttex device
@@ -308,6 +330,8 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
     scene_num      - Scene number for video filename
     shot_num       - Shot number for video filename
     take_num       - Take number for video filename
+    sch_num        - Schedule number to record to log
+    trial_num      - Trial number to record to log
     """
 
     # Audio control described here:
@@ -365,11 +389,6 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
             prev_take = int(take_num) - 1
         else:
             prev_take = int(log.video_filename[iLog][-3:])
-
-        if np.isnan(iLog) or (str(prev_date) != str(curr_date.strftime("%Y-%m-%d"))):
-            trial_num = 1
-        else:
-            trial_num = int(log.trial_num[iLog]) + 1
 
     # Timer starts
     starttime_str = now.strftime("%H:%M:%S")
@@ -431,7 +450,8 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
 
         # Data to add to log
         log_data = {
-            'date': [curr_date.strftime("%Y-%m-%d")],    
+            'date': [curr_date.strftime("%Y-%m-%d")],   
+            'sch_num': [sch_num], 
             'trial_num' : [trial_num],
             'start_time': [starttime_str],
             'video_filename': [vid_filename]
