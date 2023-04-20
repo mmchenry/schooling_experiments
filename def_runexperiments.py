@@ -168,16 +168,8 @@ def run_experiment_schedule(dmx, aud_path, log_path, schedule_path, LED_IP=None,
     if not os.path.isfile(schedule_path):
         raise ValueError("Schedule file does not exist")
 
-    # Check if log file exists
-    if not os.path.isfile(log_path):
-        # Create an empty pandas dataframe with the column headings of 'date', 'sch_num','trail_num', write to disk
-        log = pd.DataFrame(columns=['date', 'sch_num','trail_num','start_time','video_filename',
-                                'analyze','light_start','start_dur','ramp_dur','light_end',
-                                'start_dur_min','ramp_dur_sec','end_dur_min'])
-        log.to_csv(log_path, index=False)
-    else:
-        # Load recording_log
-        log = pd.read_csv(log_path)
+    # Load recording_log        
+    log = pd.read_csv(log_path)
 
     # Read schedule file
     schedule = pd.read_csv(schedule_path)
@@ -350,7 +342,7 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
         raise OSError("aud_path not found at " + aud_path)
 
     # If just a ramp
-    if light_dur==None:
+    if light_dur.any==None:
         if len(light_level)!=2:
             raise ValueError("light_level needs to be an array of 2 values for a ramp")
 
@@ -360,6 +352,9 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
             raise ValueError("lengths of light_level and light duration need to be equal")
         elif len(light_dur)>2:
             raise ValueError("This function assumes a max of 2 light levels")
+
+    if (ramp_dur is not None) &  ~np.isscalar(ramp_dur):
+        ramp_dur = ramp_dur[0]
 
     # Dataframe of light and control levels 
     df = make_ramp(light_level, light_dur, ramp_dur, plot_data=plot_data)
@@ -394,7 +389,7 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
     starttime_str = now.strftime("%H:%M:%S")
     start_time = time.time()
     curr_time  = 0
-    end_time   = max(df.index)
+    end_time   = max(df.time)
 
     if control_hw and trig_video:
         p = multiprocess.Process(target=playsound, args=(aud_path, ))
@@ -408,7 +403,7 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
         curr_time = time.time() - start_time
 
         # Current control value (0 to 1)
-        curr_control = np.interp(curr_time, df.index, df.control_level)
+        curr_control = np.interp(curr_time, df.time, df.control_level)
 
         if control_hw:
             # Sets DMX channel 1 in 8-bit value (Channel 1 is the intensity)
@@ -509,49 +504,59 @@ def make_ramp(light_level, light_dur=None, ramp_dur=None, plot_data=False):
     """
 
     # Check inputs
-    if (light_dur!=None) and (len(light_dur)!=2):
-        raise ValueError("This function assumes 2 light levels")
-
-    if (ramp_dur==None):
-        raise ValueError("This function assumes 1 ramp duration")
-    
-    if len(light_level)!=2:
+    if (len(light_level)>2) or (len(light_dur)<1):
         raise ValueError("This function assumes a max of 2 light levels")
-    
-    # Standard ramp with periods before and after
-    if light_dur!=None:
-        # Define time vector
-        dt = 1/1000
-        tot_dur = np.sum(light_dur*60) + np.sum(ramp_dur)
-        time = np.linspace(0, tot_dur, int(round(tot_dur/dt)))
 
-        # Make empty dataframe
-        df = pd.DataFrame(columns=['light_level','control_level'], index=time, dtype='float')    
+    # Define time step
+    dt = 1/1000
+
+    # Make empty dataframe
+    df = pd.DataFrame(columns=['time','light_level','control_level'], dtype='float')   
+
+    # No ramp
+    if ramp_dur==None:
+
+        # Check light level
+        if len(light_level)>1:
+            raise ValueError("Since there is no ramp, the light level should only have 1 value")
+        
+        # Make scalar
+        if ~np.isscalar(light_level):
+            light_level = light_level[0]
+
+        # Define time vector
+        tot_dur = np.sum(light_dur*60)
+        df.time = np.linspace(0, tot_dur, int(round(tot_dur/dt)))
 
         # Initial light_level values
-        df.loc[df.index<=light_dur[0]*60, 'light_level'] = light_level[0]
+        df.loc[:, 'light_level'] = light_level
+
+    # Standard ramp with periods before and after
+    elif light_dur.any!=None:
+        # Define time vector
+        tot_dur = np.sum(light_dur*60) + np.sum(ramp_dur)
+        df.time = np.linspace(0, tot_dur, int(round(tot_dur/dt)))
+
+        # Initial light_level values
+        df.loc[df.time<=light_dur[0]*60, 'light_level'] = light_level[0]
 
         # Ramp
-        idx = (df.index<=(light_dur[0]*60+ramp_dur)) & (df.index>light_dur[0]*60)
-        ramp_vals = (light_level[1]-light_level[0])/ramp_dur * (time[idx]-light_dur[0]*60) + light_level[0]
+        idx = (df.time<=(light_dur[0]*60+ramp_dur)) & (df.time>light_dur[0]*60)
+        ramp_vals = (light_level[1]-light_level[0])/ramp_dur * (df.time[idx]-light_dur[0]*60) + light_level[0]
         df.loc[idx, 'light_level'] = ramp_vals
 
         # Second fixed light level
-        idx = (df.index<=(light_dur[0]*60+ramp_dur+light_dur[1]*60)) & (df.index>(light_dur[0]*60+ramp_dur))
+        idx = (df.time<=(light_dur[0]*60+ramp_dur+light_dur[1]*60)) & (df.time>(light_dur[0]*60+ramp_dur))
         df.loc[idx, 'light_level'] = light_level[1]     
 
     # If just a ramp
     else:    
         # Define time vector
-        dt = 1/1000
         tot_dur = np.sum(ramp_dur)
-        time = np.linspace(0, tot_dur, int(round(tot_dur/dt)))
-
-        # Make empty dataframe
-        df = pd.DataFrame(columns=['light_level','control_level'], index=time, dtype='float')    
+        df.time = np.linspace(0, tot_dur, int(round(tot_dur/dt))) 
 
         # Ramp
-        ramp_vals = (light_level[1]-light_level[0])/ramp_dur * time + light_level[0]
+        ramp_vals = (light_level[1]-light_level[0])/ramp_dur * df.time + light_level[0]
         df.loc[:, 'light_level'] = ramp_vals
          
 
@@ -560,7 +565,7 @@ def make_ramp(light_level, light_dur=None, ramp_dur=None, plot_data=False):
 
     # Plot 
     if plot_data:
-        fig = px.line(df, x=df.index, y='control_level')
+        fig = px.line(df, x='time', y='control_level')
         fig.show()
 
     return df    

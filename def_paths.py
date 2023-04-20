@@ -1,4 +1,5 @@
 import os
+import pandas as pd
 
 
 def give_paths(root_path, proj_name, code_path=None):
@@ -97,9 +98,25 @@ def give_paths(root_path, proj_name, code_path=None):
     # add 'kinekit path to paths, if code_path is not None
     if code_path is not None:
         paths['kinekit'] = code_path + os.sep + 'kineKit'
+    
+    # Create a recording log file if it does not exist
+    log_path = proj_path + os.sep + 'recording_log.csv'
+    if not os.path.isfile(log_path):
+        # Create an empty pandas dataframe with the column headings of 'date', 'sch_num','trail_num', write to disk
+        log = pd.DataFrame(columns=['date', 'sch_num','trail_num','start_time','video_filename',
+                                'analyze','light_start','light_end',
+                                'start_dur_min','ramp_dur_sec','end_dur_min'])
+        log.to_csv(log_path, index=False)
+        print('Created recording log: ' + log_path)
 
-    # give warning id experiment_log.csv is not present
-    if not os.path.exists(paths['cat']):
-        print('WARNING: Missing experiment log: ' + paths['cat'])
+    # Create an experiment log file if it does not exist
+    if not os.path.isfile(paths['cat']):
+        # Create an empty pandas dataframe with the column headings of 'date', 'sch_num','trail_num', write to disk
+        cat = pd.DataFrame(columns=['date', 'sch_num','trail_num','school_num','fish_num','video_filename',
+                                    'roi_x','roi_y','roi_w','roi_h','analyze','make_video','mask_filename',
+                                    'threshold','blob_size_range','use_adaptive_threshold','adaptive_threshold_scale',
+                                    'dilation_size','mask_filename','meta_real_width','settings_file','Notes'])
+        cat.to_csv(paths['cat'], index=False)
+        print('Created experiment log: ' + paths['cat'])
 
     return paths
