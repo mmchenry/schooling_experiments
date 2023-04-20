@@ -22,9 +22,7 @@ def get_light_level(light_level):
     Converts desired light level (0 to 1) to the necessary controller level to achieve that light light_level. 
     """
 
-    # TODO: measure relationship between control signal and light intensity, then update this code
-
-    control_level = .98 * light_level
+    control_level = 1 * light_level
 
     return control_level
     
@@ -341,18 +339,6 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
     if control_hw and (not os.path.isfile(aud_path)):
         raise OSError("aud_path not found at " + aud_path)
 
-    # If just a ramp
-    # if min(light_dur==None):
-    #     if len(light_level)!=2:
-    #         raise ValueError("light_level needs to be an array of 2 values for a ramp")
-
-    # # If there is a ramp with light lights before and after
-    # else:
-    #     if len(light_dur) != len(light_level):
-    #         raise ValueError("lengths of light_level and light duration need to be equal")
-    #     elif len(light_dur)>2:
-    #         raise ValueError("This function assumes a max of 2 light levels")
-
     if (ramp_dur is not None) &  ~np.isscalar(ramp_dur):
         ramp_dur = ramp_dur[0]
 
@@ -504,8 +490,10 @@ def make_ramp(light_level, light_dur=None, ramp_dur=None, plot_data=False):
     """
 
     # Check inputs
-    # if (len(light_level)>2) or (len(light_dur)<1):
-    #     raise ValueError("This function assumes a max of 2 light levels")
+    if (type(light_level)==np.ndarray) and (len(light_level)>2):
+        raise ValueError("This function assumes a max of 2 light levels")
+    elif (type(light_dur)==np.ndarray) and (len(light_dur)>2):
+        raise ValueError("This function assumes a max of 2 light levels")
 
     # Define time step
     dt = 1/1000
