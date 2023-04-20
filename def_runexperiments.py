@@ -342,16 +342,16 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
         raise OSError("aud_path not found at " + aud_path)
 
     # If just a ramp
-    if light_dur.any==None:
-        if len(light_level)!=2:
-            raise ValueError("light_level needs to be an array of 2 values for a ramp")
+    # if min(light_dur==None):
+    #     if len(light_level)!=2:
+    #         raise ValueError("light_level needs to be an array of 2 values for a ramp")
 
-    # If there is a ramp with light lights before and after
-    else:
-        if len(light_dur) != len(light_level):
-            raise ValueError("lengths of light_level and light duration need to be equal")
-        elif len(light_dur)>2:
-            raise ValueError("This function assumes a max of 2 light levels")
+    # # If there is a ramp with light lights before and after
+    # else:
+    #     if len(light_dur) != len(light_level):
+    #         raise ValueError("lengths of light_level and light duration need to be equal")
+    #     elif len(light_dur)>2:
+    #         raise ValueError("This function assumes a max of 2 light levels")
 
     if (ramp_dur is not None) &  ~np.isscalar(ramp_dur):
         ramp_dur = ramp_dur[0]
@@ -504,8 +504,8 @@ def make_ramp(light_level, light_dur=None, ramp_dur=None, plot_data=False):
     """
 
     # Check inputs
-    if (len(light_level)>2) or (len(light_dur)<1):
-        raise ValueError("This function assumes a max of 2 light levels")
+    # if (len(light_level)>2) or (len(light_dur)<1):
+    #     raise ValueError("This function assumes a max of 2 light levels")
 
     # Define time step
     dt = 1/1000
@@ -532,7 +532,7 @@ def make_ramp(light_level, light_dur=None, ramp_dur=None, plot_data=False):
         df.loc[:, 'light_level'] = light_level
 
     # Standard ramp with periods before and after
-    elif light_dur.any!=None:
+    elif type(light_dur)==np.ndarray:
         # Define time vector
         tot_dur = np.sum(light_dur*60) + np.sum(ramp_dur)
         df.time = np.linspace(0, tot_dur, int(round(tot_dur/dt)))
