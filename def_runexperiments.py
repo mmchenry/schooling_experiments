@@ -27,8 +27,8 @@ def get_light_level(light_level):
     return control_level
     
 
-def make_schedule(schedule_path, change_var=None, light_start=None, light_end=None, light_btwn=0.5,
-                start_dur_min=None, end_dur_min=None, ramp_dur_sec=None, min_val=None, max_val=None, num_val=2, 
+def make_schedule(schedule_path, change_var=None, light_start=0.5, light_end=None, light_btwn=0.5,
+                start_dur_min=0, end_dur_min=0, ramp_dur_sec=0, min_val=None, max_val=None, num_trial=2, 
                 btwn_period_min=5, pre_ramp_dur_sec=5, post_ramp_dur_sec=5, start_delay_min=0.5):
     """
     Creates a schedule of experiments to run where the value of a single variable ('change_var') 
@@ -44,7 +44,7 @@ def make_schedule(schedule_path, change_var=None, light_start=None, light_end=No
     ramp_dur_sec      - duration (sec) of ramp between light levels
     min_val           - minimum value of variable to change
     max_val           - maximum value of variable to change
-    num_val           - number of values of variable to change
+    num_trial           - number of values of variable to change
     btwn_period_min   - time (min) between experiments
     pre_ramp_dur_sec  - duration of ramp before experiment starts
     post_ramp_dur_sec - duration of ramp after experiment 
@@ -52,7 +52,7 @@ def make_schedule(schedule_path, change_var=None, light_start=None, light_end=No
     """
     
     # Check inputs
-    if change_var not in ['start_light', 'end_light', 'start_dur_min', 'end_dur_min', 'ramp_dur_sec']:
+    if (change_var is not None) and (change_var not in ['start_light', 'end_light', 'start_dur_min', 'end_dur_min', 'ramp_dur_sec']):
         raise ValueError("change_var must be 'start_light', 'end_light', 'start_dur_min', 'end_dur_min', 'ramp_dur_sec'")
 
     if change_var in ['start_light', 'end_light']:
@@ -60,22 +60,34 @@ def make_schedule(schedule_path, change_var=None, light_start=None, light_end=No
             raise ValueError("light levels must be between 0 and 1")
         if min_val>max_val:
             raise ValueError("min_val must be less than max_val")
-        if num_val<2:
-            raise ValueError("num_val must be greater than 2")
+        if num_trial<2:
+            raise ValueError("num_trial must be greater than 2")
 
     if change_var in ['start_dur_min', 'end_dur_min', 'ramp_dur_sec']:
         if min_val<0:
             raise ValueError("duration must be greater than 0")
         if min_val>max_val:
             raise ValueError("min_val must be less than max_val")
-        if num_val<2:
-            raise ValueError("num_val must be greater than 2")
+        if num_trial<2:
+            raise ValueError("num_trial must be greater than 2")
 
     # Check ramp durations
     if (pre_ramp_dur_sec+post_ramp_dur_sec)>btwn_period_min*60:
         raise ValueError("pre_ramp_dur_sec + post_ramp_dur_sec must be less than btwn_period_min*60")
     elif pre_ramp_dur_sec>start_delay_min*60:
         raise ValueError("pre_ramp_dur_sec must be less than start_delay_min*60")
+
+    # Identify lack of ramp
+    if (end_dur_min==0) or (ramp_dur_sec==0) or (light_end!=None):
+        print('NOTE: Creating schedule with no ramps')
+
+        # Issue warnings
+        if (end_dur_min!=0):
+            raise Warning('Igoring end_dur_min value provided')
+        if (ramp_dur_sec!=0):
+            raise Warning('Igoring ramp_dur_sec value provided')
+        if (light_end!=None):
+            raise Warning('Igoring light_end value provided')  
 
     # get current date in the format YYYY-MM-DD and define path for csv file
     date = dt.datetime.now().strftime("%Y-%m-%d")
@@ -99,16 +111,20 @@ def make_schedule(schedule_path, change_var=None, light_start=None, light_end=No
 
     full_path = schedule_path + os.sep + filename + '.csv'
 
-    # Make array of values to change
-    vals = np.linspace(min_val, max_val, num_val)
-
     # Make schedule dataframe with 'change_var' as a string and all other variables as floats
     schedule = pd.DataFrame(columns=['trial_num','start_time_min', 
                                      'light_start', 'light_end', 'light_btwn', 'start_dur_min', 'ramp_dur_sec', 'end_dur_min', 
                                      'pre_ramp_dur_sec', 'post_ramp_dur_sec'], dtype='object')
+    
+    # Make array of values to change
+    if change_var is not None:
+        vals = np.linspace(min_val, max_val, num_trial)
 
-    # Randomize order of values
-    np.random.shuffle(vals)
+        # Randomize order of values
+        np.random.shuffle(vals)
+
+    else:
+        vals = np.linspace(0, num_trial-1, num_trial)
 
     # Add non-varied variables
     for i in range(len(vals)):
@@ -117,21 +133,22 @@ def make_schedule(schedule_path, change_var=None, light_start=None, light_end=No
         schedule.loc[i, 'light_end']        = light_end
         schedule.loc[i, 'light_btwn']       = light_btwn
         schedule.loc[i, 'start_dur_min']    = start_dur_min
-        schedule.loc[i, 'ramp_dur_sec']     = schedule.loc[i, 'end_dur_min'] - schedule.loc[i, 'start_dur_min']
         schedule.loc[i, 'end_dur_min']      = end_dur_min
+        schedule.loc[i, 'ramp_dur_sec']     = ramp_dur_sec
         schedule.loc[i, 'pre_ramp_dur_sec'] = pre_ramp_dur_sec
         schedule.loc[i, 'post_ramp_dur_sec']= post_ramp_dur_sec
 
-    # Add values for varied variable 
-    for i, val in enumerate(vals):
-        schedule.loc[i, change_var] = val
+    # Overwrite values for varied variable 
+    if change_var is not None:
+        for i, val in enumerate(vals):
+            schedule.loc[i, change_var] = val
 
     # Add start times
     for i in range(len(vals)):
         if i==0:
             schedule.loc[i, 'start_time_min'] = start_delay_min
         else:   
-            schedule.loc[i, 'start_time_min'] = schedule.loc[i-1, 'start_time_min'] +      btwn_period_min + sum(schedule.loc[i-1, ['start_dur_min', 'end_dur_min']]) + schedule.loc[i-1, 'ramp_dur_sec']/60
+            schedule.loc[i, 'start_time_min'] = schedule.loc[i-1, 'start_time_min'] + btwn_period_min + sum(schedule.loc[i-1, ['start_dur_min', 'end_dur_min']]) + schedule.loc[i-1, 'ramp_dur_sec']/60
             ttt=3
 
     # write schedule to csv at schedule_path
