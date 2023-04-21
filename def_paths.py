@@ -103,7 +103,7 @@ def give_paths(root_path, proj_name, code_path=None):
     log_path = proj_path + os.sep + 'recording_log.csv'
     if not os.path.isfile(log_path):
         # Create an empty pandas dataframe with the column headings of 'date', 'sch_num','trail_num', write to disk
-        log = pd.DataFrame(columns=['date', 'sch_num','trail_num','start_time','video_filename',
+        log = pd.DataFrame(columns=['date', 'sch_num','trial_num','start_time','video_filename',
                                 'analyze','light_start','light_end',
                                 'start_dur_min','ramp_dur_sec','end_dur_min'])
         log.to_csv(log_path, index=False)
@@ -112,7 +112,7 @@ def give_paths(root_path, proj_name, code_path=None):
     # Create an experiment log file if it does not exist
     if not os.path.isfile(paths['cat']):
         # Create an empty pandas dataframe with the column headings of 'date', 'sch_num','trail_num', write to disk
-        cat = pd.DataFrame(columns=['date', 'sch_num','trail_num','school_num','fish_num','video_filename',
+        cat = pd.DataFrame(columns=['date', 'sch_num','trial_num','school_num','fish_num','video_filename',
                                     'roi_x','roi_y','roi_w','roi_h','analyze','make_video','mask_filename',
                                     'threshold','blob_size_range','use_adaptive_threshold','adaptive_threshold_scale',
                                     'dilation_size','mask_filename','meta_real_width','settings_file','Notes'])

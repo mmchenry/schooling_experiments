@@ -246,7 +246,7 @@ def run_experiment_schedule(dmx, aud_path, log_path, schedule_path, LED_IP=None,
     # Set initial intensity of light to light_btwn
     if control_hw:
         # DMX channel 1 to max 255
-        dmx.set_channel(1, int(schedule.loc[trials[0], 'light_btwn']*255))  
+        dmx.set_channel(1, int(schedule.loc[trials[0]-1, 'light_btwn']*255))  
 
     # Initial take number
     take_num = take_num_start
@@ -278,8 +278,7 @@ def run_experiment_schedule(dmx, aud_path, log_path, schedule_path, LED_IP=None,
 
         # Run experiment (logged)
         run_program(dmx, aud_path, light_level=[light_start, light_end], light_dur=[start_dur, end_dur], 
-            ramp_dur=ramp_dur, log_path=log_path, trig_video=True, echo=False, plot_data=False, movie_prefix=movie_prefix, LED_IP=LED_IP, 
-            analyze_prompt=False, control_hw=control_hw, scene_num=scene_num, shot_num=shot_num, take_num=take_num, sch_num=sch_num, trial_num=trial)
+            ramp_dur=ramp_dur, log_path=log_path, trig_video=True, echo=False, plot_data=False, movie_prefix=movie_prefix, LED_IP=LED_IP, analyze_prompt=False, control_hw=control_hw, scene_num=scene_num, shot_num=shot_num, take_num=take_num, sch_num=sch_num, trial_num=trial)
 
         # Run post-experiment ramp (not logged)
         run_program(dmx, aud_path, light_level=[light_end, light_btwn], light_dur=None, ramp_dur=post_dur, 
@@ -391,7 +390,7 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
         # Current control value (0 to 1)
         curr_control = np.interp(curr_time, df.time, df.control_level)
 
-        if control_hw:
+        if control_hw and not np.isnan(curr_control):
             # Sets DMX channel 1 in 8-bit value (Channel 1 is the intensity)
             dmx.set_channel(1, int(curr_control*255))  
 
@@ -520,7 +519,7 @@ def make_ramp(light_level, light_dur=None, ramp_dur=None, plot_data=False):
         df.loc[:, 'light_level'] = light_level
 
     # Standard ramp with periods before and after
-    elif type(light_dur)==np.ndarray:
+    elif (type(light_dur)==np.ndarray) or (type(light_dur)==list):
         # Define time vector
         tot_dur = np.sum(light_dur*60) + np.sum(ramp_dur)
         df.time = np.linspace(0, tot_dur, int(round(tot_dur/dt)))
