@@ -74,13 +74,13 @@ def give_paths(root_path, proj_name, code_path=None):
         'cat': proj_path + os.sep + 'experiment_log.csv', 
         
         # Path to experiment catalog file
-        'data_raw': proj_path + os.sep + 'data' + os.sep + 'raw' + os.sep ,
+        'data_raw': proj_path + os.sep + 'data' + os.sep + 'raw',
 
         # Path to settings file
         'settings': proj_path + os.sep + 'data' + os.sep + 'settings',
 
         # Path to raw videos
-        'vidin': proj_path + os.sep + 'video' + os.sep + 'raw' + os.sep ,
+        'vidin': proj_path + os.sep + 'video' + os.sep + 'raw',
 
         # Path to exported videos
         'vidout': proj_path + os.sep + 'video' + os.sep + 'compressed',
