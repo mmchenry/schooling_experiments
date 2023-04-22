@@ -381,11 +381,11 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
         if not np.isnan(iLog):
             prev_date = log.date[iLog]
 
-        # Previous take number + 1 to new filename, if prev filename is not a nan
-        if np.isnan(iLog) or pd.isnull(log.video_filename[iLog]):
-            prev_take = int(take_num) - 1
-        else:
-            prev_take = int(log.video_filename[iLog][-3:])
+        # # Previous take number + 1 to new filename, if prev filename is not a nan
+        # if np.isnan(iLog) or pd.isnull(log.video_filename[iLog]):
+        #     prev_take = int(take_num) - 1
+        # else:
+        #     prev_take = int(log.video_filename[iLog][-3:])
 
     # Timer starts
     starttime_str = now.strftime("%H:%M:%S")
@@ -432,9 +432,9 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
             prompt_txt = "Enter scene, shot, and take numbers (e.g. 1 1 " + str(int(prev_take+1)) + "):"
             scene_num, shot_num, take_num = input(prompt_txt).split()
 
-        # Otherwise, generate them
-        else:
-            take_num = prev_take + 1   
+        # # Otherwise, generate them
+        # else:
+        #     take_num = prev_take + 1   
 
     # Define current filename
     curr_scene   = '00' + str(int(scene_num))
