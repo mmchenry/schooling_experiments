@@ -95,10 +95,15 @@ def raw_to_mat(cat, path):
     # path = dd.give_paths() 
 
     # Loop thru each experiment
-    for expt_c in cat.video_filename:
+    for expt_c in cat.index:
+
+        # Define trial filename
+        trialnum = str(int(cat.trial_num[expt_c]))
+        trialnum = '00' + trialnum[-3:]
+        datetrial_name = cat.date[expt_c] + '_' + trialnum
 
         # Paths for raw data files for current experiment
-        path_c = path['data_raw'] + os.sep + expt_c + '*' + 'npz'
+        path_c = path['data_raw'] + os.sep + 'data' + os.sep + datetrial_name + '*' + 'npz'
 
         # Get all npz filenames for current experiment
         raw_files = glob.glob(path_c)
