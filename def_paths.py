@@ -92,7 +92,10 @@ def give_paths(root_path, proj_name, code_path=None):
         'mask': proj_path + os.sep + 'masks',
 
         # Temporary video
-        'tmp': proj_path + os.sep + 'video' + os.sep + 'tmp'
+        'tmp': proj_path + os.sep + 'video' + os.sep + 'tmp',
+
+        # Schedules
+        'sch': proj_path + os.sep + 'experiment_schedules'
         }
     
     # add 'kinekit path to paths, if code_path is not None
