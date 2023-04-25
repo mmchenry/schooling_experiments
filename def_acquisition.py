@@ -4,6 +4,7 @@ import cv2 as cv
 import numpy as np
 import pandas as pd
 import os
+import cv2 as cv
 # import def_definepaths as dd
 
 
@@ -80,6 +81,57 @@ def measure_pixintensity(cat, data_path, vid_path):
 
         # Turn off connection to video file
         cv.destroyAllWindows()
+
+def make_mask(im, roi, mask_path, date, sch_num, trial_num):
+    """ Make a mask for a video
+    im (np.array)   - Image to mask
+    roi (np.array)  - Region of interest (x, y, w, h)
+    mask_path (str) - Path to save mask
+    date (str)      - Date of experiment
+    sch_num (int)   - Schedule number
+    trial_num (int) - Trial number
+    """
+    # Make frame a gray field
+    im = int(256/2) + 0*im
+
+    x_roi = float(roi[0])
+    y_roi = float(roi[1])
+    w_roi = float(roi[2])
+    h_roi = float(roi[3])
+
+    xC = x_roi + w_roi/2
+    yC = y_roi + h_roi/2
+    dims = (int(np.ceil(w_roi/2)), int(np.ceil(h_roi/2)))
+    cntr = (int(x_roi + w_roi/2), int(y_roi + h_roi/2))
+
+    # Define circular image for mask
+    im = cv.ellipse(im, cntr, dims, angle=0, startAngle=0, endAngle=360, color=(255,255,255),thickness=-1)
+
+    # Start transparent image as a bunch of opaque white pixels
+    trans_img = int(255)*np.ones((im.shape[0], im.shape[1], 4), dtype=np.uint8)
+
+    # Make pixels around circle opaque gray
+    trans_img[:,:,0] = int(256/2)
+    trans_img[:,:,1] = int(256/2)
+    trans_img[:,:,2] = int(256/2)
+
+    # Set opacity (4th channel in image) to zero at white circle pixels in im
+    trans_img[np.where(np.all(im[..., :3] == 255, -1))] = 0
+
+    # Filename for frame of current sequence
+    filename = date + '_' + format(sch_num,'03') +'_' +  format(trial_num,'03') + '_mask'
+
+    # Output mask file
+    mask_path = mask_path + os.sep + filename + '.png'
+
+    # Write mask image to disk
+    result = cv.imwrite(mask_path, trans_img)
+    # result = cv.imwrite(mask_path, im)
+
+    if result is False:
+        print('Saving mask image the following path failed: ' + mask_path)
+    else:
+        print('Mask image saved to: ' + mask_path)
 
 
 def raw_to_mat(cat, path):
