@@ -152,7 +152,12 @@ def raw_to_mat(cat, path):
         # Define trial filename
         trialnum = str(int(cat.trial_num[expt_c]))
         trialnum = '00' + trialnum[-3:]
-        datetrial_name = cat.date[expt_c] + '_' + trialnum
+
+        schnum = str(int(cat.sch_num[c_row]))
+        schnum = '00' + schnum[-3:]
+
+        datetrial_name = cat.date[expt_c] + '_sch' + schnum + '_tr' + trialnum
+    
 
         # Paths for raw data files for current experiment
         path_c = path['data_raw'] + os.sep + 'data' + os.sep + datetrial_name + '*' + 'npz'
