@@ -14,65 +14,17 @@ def give_paths(root_path, proj_name, code_path=None):
         raise Exception('Project path does not exist: ' + proj_path)
     
     # raise exception if code_path is not None and code_path does not exist
-    if (code_path is not None) and (not os.path.exists(code_path)):
-        raise Exception('Code path does not exist: ' + code_path)
-  
-    # add 'data' directory, if not present in proj_path
-    if not os.path.exists(proj_path + os.sep + 'data'):
-        os.mkdir(proj_path + os.sep + 'data')
-        print('Created data directory: ' + proj_path + os.sep + 'data')
-
-    # add 'raw' directory, if not present in proj_path + os.sep + 'data'
-    if not os.path.exists(proj_path + os.sep + 'data' + os.sep + 'raw'):
-        os.mkdir(proj_path + os.sep + 'data' + os.sep + 'raw')
-        print('Created raw data directory: ' + proj_path + os.sep + 'data' + os.sep + 'raw')
-
-    # add 'settings' directory, if not present in proj_path + os.sep + 'data'
-    if not os.path.exists(proj_path + os.sep + 'data' + os.sep + 'settings'):
-        os.mkdir(proj_path + os.sep + 'data' + os.sep + 'settings')
-        print('Created settings directory: ' + proj_path + os.sep + 'data' + os.sep + 'settings')
-
-    # add 'video' directory, if not present in proj_path
-    if not os.path.exists(proj_path + os.sep + 'video'):
-        os.mkdir(proj_path + os.sep + 'video')
-        print('Created video directory: ' + proj_path + os.sep + 'video')
-
-    # add 'masks' directory, if not present in proj_path
-    if not os.path.exists(proj_path + os.sep + 'masks'):
-        os.mkdir(proj_path + os.sep + 'masks')
-        print('Created masks directory: ' + proj_path + os.sep + 'masks')
-
-    # add 'masks' directory, if not present in proj_path
-    if not os.path.exists(proj_path + os.sep + 'experiment_schedules'):
-        os.mkdir(proj_path + os.sep + 'experiment_schedules')
-        print('Created experiment_schedules directory: ' + proj_path + os.sep + 'experiment_schedules')
-
-    # add 'raw' directory, if not present in proj_path + os.sep + 'video'
-    if not os.path.exists(proj_path + os.sep + 'video' + os.sep + 'raw'):
-        os.mkdir(proj_path + os.sep + 'video' + os.sep + 'raw')
-        print('Created raw video directory: ' + proj_path + os.sep + 'video' + os.sep + 'raw')
-
-    # add 'compressed' directory, if not present in proj_path + os.sep + 'video'
-    if not os.path.exists(proj_path + os.sep + 'video' + os.sep + 'compressed'):
-        os.mkdir(proj_path + os.sep + 'video' + os.sep + 'compressed')
-        print('Created compressed video directory: ' + proj_path + os.sep + 'video' + os.sep + 'compressed')
-
-    # add 'pv' directory, if not present in proj_path + os.sep + 'video'
-    if not os.path.exists(proj_path + os.sep + 'video' + os.sep + 'pv'):
-        os.mkdir(proj_path + os.sep + 'video' + os.sep + 'pv')
-        print('Created pv video directory: ' + proj_path + os.sep + 'video' + os.sep + 'pv')
-
-    # add 'tmp' directory, if not present in proj_path + os.sep + 'video'
-    if not os.path.exists(proj_path + os.sep + 'video' + os.sep + 'tmp'):
-        os.mkdir(proj_path + os.sep + 'video' + os.sep + 'tmp')
-        print('Created tmp video directory: ' + proj_path + os.sep + 'video' + os.sep + 'tmp')
-
+    # if (code_path is not None) and (not os.path.exists(code_path)):
+    #     raise Exception('Code path does not exist: ' + code_path)
+    
     # Directory structure wrt root folders
     paths = {
+        # Path to data
+        'data': proj_path + os.sep + 'data',
 
-        # Path to experiment catalog file
-        'cat': proj_path + os.sep + 'experiment_log.csv', 
-        
+        # Path to videos
+        'video': proj_path + os.sep + 'video',
+
         # Path to experiment catalog file
         'data_raw': proj_path + os.sep + 'data' + os.sep + 'raw',
 
@@ -86,10 +38,16 @@ def give_paths(root_path, proj_name, code_path=None):
         'vidout': proj_path + os.sep + 'video' + os.sep + 'compressed',
 
         # Path to exported videos
+        'vidcal': proj_path + os.sep + 'video' + os.sep + 'calibration',
+
+        # Path to exported videos
         'vidpv': proj_path + os.sep + 'video' + os.sep + 'pv',
 
         # Mask file
         'mask': proj_path + os.sep + 'masks',
+
+        # For calibration images
+        'imcal': proj_path + os.sep + 'calibration_images',
 
         # Temporary video
         'tmp': proj_path + os.sep + 'video' + os.sep + 'tmp',
@@ -98,9 +56,18 @@ def give_paths(root_path, proj_name, code_path=None):
         'sch': proj_path + os.sep + 'experiment_schedules'
         }
     
+    # Create loop that makes a directory for each path in paths
+    for path in paths.values():
+        if not os.path.exists(path):
+            os.mkdir(path)
+            print('Created directory: ' + path)
+
+     # Path to experiment catalog file
+    paths['cat']= proj_path + os.sep + 'experiment_log.csv'
+
     # add 'kinekit path to paths, if code_path is not None
-    if code_path is not None:
-        paths['kinekit'] = code_path + os.sep + 'kineKit'
+    # if code_path is not None:
+    #     paths['kinekit'] = code_path + os.sep + 'kineKit'
     
     # Create a recording log file if it does not exist
     log_path = proj_path + os.sep + 'recording_log.csv'
@@ -116,6 +83,7 @@ def give_paths(root_path, proj_name, code_path=None):
     if not os.path.isfile(paths['cat']):
         # Create an empty pandas dataframe with the column headings of 'date', 'sch_num','trail_num', write to disk
         cat = pd.DataFrame(columns=['date', 'sch_num','trial_num','school_num','fish_num','video_filename',
+                                    'cal_video_filename','cm_per_pix',
                                     'roi_x','roi_y','roi_w','roi_h','analyze','make_video','mask_filename',
                                     'threshold','blob_size_range','use_adaptive_threshold','adaptive_threshold_scale',
                                     'dilation_size','mask_filename','meta_real_width','settings_file','Notes'])

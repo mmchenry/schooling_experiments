@@ -124,7 +124,9 @@ Includes the following files:
 
 - **[def_acquisition.py](def_acquisition.py)**: Functions for running data acquisition.
 
+- **[acqfunctions.py](acqfunctions.py)**: Copied from kineKit, these functions are used to prep video for TRex.
 
+- **[videotools.py](videotools.py)**: Copied from kineKit, series of functions for manipulating and interacting with video. Requires installing ffmpeg and opencv.
 
 [//]: # ()
 [//]: # (## Processing)

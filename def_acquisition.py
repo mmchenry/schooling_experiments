@@ -81,6 +81,7 @@ def measure_pixintensity(cat, data_path, vid_path):
 
         # Turn off connection to video file
         cv.destroyAllWindows()
+        
 
 def make_mask(im, roi, mask_path, date, sch_num, trial_num):
     """ Make a mask for a video
