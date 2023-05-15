@@ -150,12 +150,9 @@ def raw_to_mat(cat, path):
     # Loop thru each experiment
     for expt_c in cat.index:
 
-        # Define trial filename
-        trialnum = str(int(cat.trial_num[expt_c]))
-        trialnum = '00' + trialnum[-3:]
-
-        schnum = str(int(cat.sch_num[c_row]))
-        schnum = '00' + schnum[-3:]
+        # Define trial and schedule strings
+        trialnum = str(int(cat.trial_num[expt_c])).zfill(3)
+        schnum = str(int(cat.sch_num[expt_c])).zfill(3)
 
         datetrial_name = cat.date[expt_c] + '_sch' + schnum + '_tr' + trialnum
     
@@ -184,7 +181,7 @@ def raw_to_mat(cat, path):
                     dict_c[field_c] = b[field_c]
 
                 # Path for current mat file
-                out_path = path['data_raw'] + os.sep + os.path.basename(raw_c)[:-4] + '.mat'
+                out_path = path['data_mat'] + os.sep + os.path.basename(raw_c)[:-4] + '.mat'
 
                 # Save dictionary data to a mat file
                 savemat(out_path, dict_c)
