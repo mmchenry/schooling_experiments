@@ -7,11 +7,20 @@ def give_paths(root_path, proj_name, code_path=None):
     Function for defining the subdirectories for all code in the project directory.
     """
     # Project path is the root path + project name
-    proj_path = root_path + os.sep + proj_name
+    data_path = root_path + os.sep + 'data' + os.sep + proj_name
+    vid_path = root_path + os.sep + 'video' + os.sep + proj_name
 
-    #  raise exception if project path does not exist
-    if not os.path.exists(proj_path):
-        raise Exception('Project path does not exist: ' + proj_path)
+    if not os.path.exists(data_path):
+        os.mkdir(data_path)
+    
+    if not os.path.exists(vid_path):
+        os.mkdir(vid_path)
+
+    #  raise exception if project paths do not exist
+    # if not os.path.exists(data_path):
+    #     raise Exception('Data path does not exist: ' + data_path)
+    # if not os.path.exists(vid_path):
+    #     raise Exception('Video path does not exist: ' + vid_path)
     
     # raise exception if code_path is not None and code_path does not exist
     # if (code_path is not None) and (not os.path.exists(code_path)):
@@ -20,46 +29,46 @@ def give_paths(root_path, proj_name, code_path=None):
     # Directory structure wrt root folders
     paths = {
         # Path to data
-        'data': proj_path + os.sep + 'data',
+        'data': data_path + os.sep + 'data',
 
         # Path to videos
-        'video': proj_path + os.sep + 'video',
+        'video': vid_path + os.sep,
 
         # Path to experiment catalog file
-        'data_raw': proj_path + os.sep + 'data' + os.sep + 'raw',
+        'data_raw': data_path + os.sep + 'data' + os.sep + 'raw',
 
         # Path to experiment catalog file
-        'data_mat': proj_path + os.sep + 'data' + os.sep + 'matlab',
+        'data_mat': data_path + os.sep + 'data' + os.sep + 'matlab',
 
         # Path to experiment catalog file
-        'data_mat_vid': proj_path + os.sep + 'data' + os.sep + 'matlab'+ os.sep + 'video',
+        'data_mat_vid': data_path + os.sep + 'data' + os.sep + 'matlab'+ os.sep + 'video',
 
         # Path to settings file
-        'settings': proj_path + os.sep + 'data' + os.sep + 'settings',
+        'settings': data_path + os.sep + 'data' + os.sep + 'settings',
 
         # Path to raw videos
-        'vidin': proj_path + os.sep + 'video' + os.sep + 'raw',
+        'vidin': vid_path + os.sep + 'raw',
 
         # Path to exported videos
-        'vidout': proj_path + os.sep + 'video' + os.sep + 'compressed',
+        'vidout': vid_path + os.sep + 'compressed',
 
-        # Path to exported videos
-        'vidcal': proj_path + os.sep + 'video' + os.sep + 'calibration',
+        # Path to calibration videos
+        'vidcal': vid_path + os.sep + 'calibration',
 
-        # Path to exported videos
-        'vidpv': proj_path + os.sep + 'video' + os.sep + 'pv',
+        # Path to pv videos
+        'vidpv': vid_path + os.sep + 'pv',
 
         # Mask file
-        'mask': proj_path + os.sep + 'masks',
+        'mask': data_path + os.sep + 'masks',
 
         # For calibration images
-        'imcal': proj_path + os.sep + 'calibration_images',
+        'imcal': data_path + os.sep + 'calibration_images',
 
         # Temporary video
-        'tmp': proj_path + os.sep + 'video' + os.sep + 'tmp',
+        'tmp': vid_path + os.sep + 'tmp',
 
         # Schedules
-        'sch': proj_path + os.sep + 'experiment_schedules'
+        'sch': data_path + os.sep + 'experiment_schedules'
         }
     
     # Create loop that makes a directory for each path in paths
@@ -69,14 +78,14 @@ def give_paths(root_path, proj_name, code_path=None):
             print('Created directory: ' + path)
 
      # Path to experiment catalog file
-    paths['cat']= proj_path + os.sep + 'experiment_log.csv'
+    paths['cat']= data_path + os.sep + 'experiment_log.csv'
 
     # add 'kinekit path to paths, if code_path is not None
     # if code_path is not None:
     #     paths['kinekit'] = code_path + os.sep + 'kineKit'
     
     # Create a recording log file if it does not exist
-    log_path = proj_path + os.sep + 'recording_log.csv'
+    log_path = data_path + os.sep + 'recording_log.csv'
     if not os.path.isfile(log_path):
         # Create an empty pandas dataframe with the column headings of 'date', 'sch_num','trail_num', write to disk
         log = pd.DataFrame(columns=['date', 'sch_num','trial_num','start_time','video_filename',
