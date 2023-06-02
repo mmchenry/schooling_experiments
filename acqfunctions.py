@@ -5,6 +5,7 @@ import cv2 as cv  # openCV for interacting with video
 import os
 import pandas as pd
 import numpy as np
+import math 
 
 def report_version():
 
@@ -308,6 +309,10 @@ def make_calibration_images(path, vid_ext_raw='MOV', vid_ext_mask='mp4', vid_qua
 
     # Make unique list of cal_video_filename
     cal_video_filenames = df.cal_video_filename.unique()
+
+    # Remove nans
+    cal_video_filenames = list(filter(lambda x: isinstance(x, str) 
+                                      or not math.isnan(x), cal_video_filenames))
 
     # Loop through each calibration video
     for cal_video_filename in cal_video_filenames:

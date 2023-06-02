@@ -31,6 +31,9 @@ def give_paths(root_path, proj_name, code_path=None):
         # Path to experiment catalog file
         'data_mat': proj_path + os.sep + 'data' + os.sep + 'matlab',
 
+        # Path to experiment catalog file
+        'data_mat_vid': proj_path + os.sep + 'data' + os.sep + 'matlab'+ os.sep + 'video',
+
         # Path to settings file
         'settings': proj_path + os.sep + 'data' + os.sep + 'settings',
 
