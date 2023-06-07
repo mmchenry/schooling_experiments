@@ -97,11 +97,15 @@ def give_paths(root_path, proj_name, code_path=None):
     # Create an experiment log file if it does not exist
     if not os.path.isfile(paths['cat']):
         # Create an empty pandas dataframe with the column headings of 'date', 'sch_num','trail_num', write to disk
-        cat = pd.DataFrame(columns=['date', 'sch_num','trial_num','school_num','fish_num','video_filename',
-                                    'cal_video_filename','cm_per_pix',
-                                    'roi_x','roi_y','roi_w','roi_h','analyze','make_video','mask_filename',
-                                    'threshold','blob_size_range','use_adaptive_threshold','adaptive_threshold_scale',
-                                    'dilation_size','mask_filename','meta_real_width','settings_file','Notes'])
+        cat = pd.DataFrame(columns=['date','sch_num','trial_num','school_id',
+                                    'exp_type','neo_treat','fish_num',
+                                    'video_filename','roi_x','roi_y','roi_w','roi_h','mask_filename',
+                                    'analyze','make_video','run_matlab',
+                                    'cal_video_filename','fr_width_cm','cm_per_pix',
+                                    'threshold','blob_size_range',
+                                    'meta_conditions','meta_species','meta_misc',
+                                    'track_threshold','blob_size_ranges','track_max_speed',
+                                    'meta_real_width','settings_file','Notes'])
         cat.to_csv(paths['cat'], index=False)
         print('Created experiment log: ' + paths['cat'])
 
