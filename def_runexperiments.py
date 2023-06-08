@@ -424,22 +424,22 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
         print('    Timecode audio ended.')
 
     # Get info about the video filename
-    if (log_path!=None):
+  #  if (log_path!=None):
+
         
         # Prompt for filename numbers
-        if analyze_prompt:
+       # if analyze_prompt:
 
-            prompt_txt = "Enter scene, shot, and take numbers (e.g. 1 1 " + str(int(prev_take+1)) + "):"
-            scene_num, shot_num, take_num = input(prompt_txt).split()
+          ##  scene_num, shot_num, take_num = input(prompt_txt).split()
 
         # # Otherwise, generate them
         # else:
         #     take_num = prev_take + 1   
 
     # Define current filename
-    curr_scene   = '00' + str(int(scene_num))
-    curr_shot    = '00' + str(int(shot_num))
-    curr_take    = '00' + str(int(take_num))
+    curr_scene   =  "{:03d}".format(scene_num)
+    curr_shot    = "{:03d}".format(shot_num)
+    curr_take    = "{:03d}".format(take_num)
     vid_filename = movie_prefix + '_S' + curr_scene[-3:] + '_S' + curr_shot[-3:] + '_T' + curr_take[-3:]
 
     # If you are logging the ramp . . .
