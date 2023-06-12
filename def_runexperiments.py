@@ -316,7 +316,7 @@ def run_experiment_schedule(dmx, aud_path, log_path, schedule_path, LED_IP=None,
 
 
 def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_path=None, trig_video=True, 
-        echo=False, plot_data=True, movie_prefix=None, LED_IP=None, analyze_prompt=True, control_hw=True, 
+        echo=False, plot_data=True, movie_prefix=None, LED_IP=None, analyze_prompt=False, control_hw=True, 
         scene_num=1, shot_num=1, take_num=1, sch_num=999, trial_num=0):
     """ 
     Transmits signal to control light intensity via Enttex DMX USB Pro.
@@ -331,7 +331,7 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
     plot_data      - whether to plot the desired timing of light changes
     movie_prefix   - text at the start of the video filenames
     LED_IP         - IP address of smart switch to be controlled 
-    analyze_prompt - Whether to ask whether to prompt to log the experiment
+    analyze_prompt - Whether to ask whether to prompt to log the experiment (Default False)
     control_hw     - Whether to control the hardware (if False, just logs the experiment)
     scene_num      - Scene number for video filename
     shot_num       - Shot number for video filename
@@ -355,6 +355,7 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
     if control_hw and (not os.path.isfile(aud_path)):
         raise OSError("aud_path not found at " + aud_path)
 
+    # check if ramp_dur is an array
     if (ramp_dur is not None) &  ~np.isscalar(ramp_dur):
         ramp_dur = ramp_dur[0]
 
@@ -469,18 +470,18 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
             log_data['end_dur_min']    = [np.nan]
          
         # Prompt and record whether to analyze recording
-        if analyze_prompt:
+        #if analyze_prompt:
 
-            input_str = input("Analyze experiment [(y)es or (n)o]?")
-            if input_str=='y' or input_str=='Y' or input_str=='yes' or input_str=='YES':
-                log_data['analyze'] = [int(1)]
-                print("    Video WILL be analyzed")
-            else:
-                log_data['analyze'] = [int(0)]
-                print("    Video will NOT be analyzed")
-        else:
-            log_data['analyze'] = [int(1)]
-            print("    Video WILL be analyzed")
+        #    input_str = input("Analyze experiment [(y)es or (n)o]?")
+        #    if input_str=='y' or input_str=='Y' or input_str=='yes' or input_str=='YES':
+        #        log_data['analyze'] = [int(1)]
+        #        print("    Video WILL be analyzed")
+        #    else:
+        #        log_data['analyze'] = [int(0)]
+        #        print("    Video will NOT be analyzed")
+        #else:
+        #    log_data['analyze'] = [int(1)]
+        #    print("    Video WILL be analyzed")
 
         # Append new log entry, make new indicies, save CSV log file
         log_curr = pd.DataFrame(log_data)
@@ -507,7 +508,8 @@ def make_ramp(light_level, light_dur=None, ramp_dur=None, plot_data=False):
 
     # Check inputs
     if (type(light_level)==np.ndarray) and (len(light_level)>2):
-        raise ValueError("This function assumes a max of 2 light levels")
+       # raise ValueError("This function assumes a max of 2 light levels")
+       print('makes error with too  many inputs')
     elif (type(light_dur)==np.ndarray) and (len(light_dur)>2):
         raise ValueError("This function assumes a max of 2 light levels")
 
@@ -537,21 +539,33 @@ def make_ramp(light_level, light_dur=None, ramp_dur=None, plot_data=False):
 
     # Standard ramp with periods before and after
     elif (type(light_dur)==np.ndarray) or (type(light_dur)==list):
-        # Define time vector
-        tot_dur = np.sum(light_dur*60) + np.sum(ramp_dur)
-        df.time = np.linspace(0, tot_dur, int(round(tot_dur/dt)))
 
-        # Initial light_level values
-        df.loc[df.time<=light_dur[0]*60, 'light_level'] = light_level[0]
+        # if method is two light segments with one ramp in between
+        if (len(light_level)==2):
+            
+            # Define time vector
+            tot_dur = np.sum(light_dur*60) + np.sum(ramp_dur)
+            df.time = np.linspace(0, tot_dur, int(round(tot_dur/dt)))
 
-        # Ramp
-        idx = (df.time<=(light_dur[0]*60+ramp_dur)) & (df.time>light_dur[0]*60)
-        ramp_vals = (light_level[1]-light_level[0])/ramp_dur * (df.time[idx]-light_dur[0]*60) + light_level[0]
-        df.loc[idx, 'light_level'] = ramp_vals
+            # Initial light_level values
+            df.loc[df.time<=light_dur[0]*60, 'light_level'] = light_level[0]
 
-        # Second fixed light level
-        idx = (df.time<=(light_dur[0]*60+ramp_dur+light_dur[1]*60)) & (df.time>(light_dur[0]*60+ramp_dur))
-        df.loc[idx, 'light_level'] = light_level[1]     
+            # Ramp
+            idx = (df.time<=(light_dur[0]*60+ramp_dur)) & (df.time>light_dur[0]*60)
+            ramp_vals = (light_level[1]-light_level[0])/ramp_dur * (df.time[idx]-light_dur[0]*60) + light_level[0]
+            df.loc[idx, 'light_level'] = ramp_vals
+
+            # Second fixed light level
+            idx = (df.time<=(light_dur[0]*60+ramp_dur+light_dur[1]*60)) & (df.time>(light_dur[0]*60+ramp_dur))
+            df.loc[idx, 'light_level'] = light_level[1]     
+        
+        # if method is three light segments with two ramp segments
+        elif (len(light_level)>2):
+            print('this is a test')
+
+
+
+    
 
     # If just a ramp
     else:    
@@ -573,3 +587,4 @@ def make_ramp(light_level, light_dur=None, ramp_dur=None, plot_data=False):
         fig.show()
 
     return df    
+
