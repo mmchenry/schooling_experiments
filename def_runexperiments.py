@@ -78,16 +78,16 @@ def make_schedule(schedule_path, change_var=None, light_start=0.5, light_end=Non
         raise ValueError("pre_ramp_dur_sec must be less than start_delay_min*60")
 
     # Identify lack of ramp
-    if (end_dur_min==0) or (ramp_dur_sec==0) or (light_end!=None):
+    if (change_var is None) and ((end_dur_min==0) or (ramp_dur_sec==0) or (light_end!=None)):
         print('NOTE: Creating schedule with no ramps')
 
         # Issue warnings
         if (end_dur_min!=0):
-            raise Warning('Igoring end_dur_min value provided')
+            print('WARNING: Igoring end_dur_min value provided')
         if (ramp_dur_sec!=0):
-            raise Warning('Igoring ramp_dur_sec value provided')
+            print('WARNING: Igoring ramp_dur_sec value provided')
         if (light_end!=None):
-            raise Warning('Igoring light_end value provided')  
+            print('WARNING: Igoring light_end value provided')  
 
     # get current date in the format YYYY-MM-DD and define path for csv file
     date = dt.datetime.now().strftime("%Y-%m-%d")
