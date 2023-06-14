@@ -89,8 +89,9 @@ def give_paths(root_path, proj_name, code_path=None):
     if not os.path.isfile(log_path):
         # Create an empty pandas dataframe with the column headings of 'date', 'sch_num','trail_num', write to disk
         log = pd.DataFrame(columns=['date', 'sch_num','trial_num','start_time','video_filename',
-                                'light_start','light_end','ramp_dur_sec',
-                                'start_dur_min','end_dur_min'])
+                                'light_start','ramp_dur_sec','light_end',
+                                'ramp2_dur_sec','light_return',
+                                'start_dur_min','end_dur_min','return_dur_min'])
         log.to_csv(log_path, index=False)
         print('Created recording log: ' + log_path)
 
