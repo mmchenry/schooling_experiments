@@ -27,9 +27,9 @@ def get_light_level(light_level):
     return control_level
     
 
-def make_schedule(schedule_path, change_var=None, light_start=0.5, light_end=None, light_btwn=0.5,
-                start_dur_min=0, end_dur_min=0, ramp_dur_sec=0, min_val=None, max_val=None, num_trial=2, 
-                btwn_period_min=5, pre_ramp_dur_sec=5, post_ramp_dur_sec=5, start_delay_min=0.5):
+def make_schedule(schedule_path, change_var=None, light_start=0.5, light_end=None, light_return=None, light_btwn=0.5,
+                start_dur_min=0, end_dur_min=0, return_dur_min=0, ramp_dur_sec=0, ramp2_dur_sec=0, min_val=None, max_val=None, num_reps=1, num_trial=2, 
+                btwn_period_min=5, pre_ramp_dur_sec=5, post_ramp_dur_sec=5, start_delay_min=0.5, fixed_rampdur_sec=None):
     """
     Creates a schedule of experiments to run where the value of a single variable ('change_var') 
     is changed in a random order. Variables other than 'change_var' are held constant and must be specified.
@@ -37,18 +37,23 @@ def make_schedule(schedule_path, change_var=None, light_start=0.5, light_end=Non
     schedule_path     - path to save the schedule
     change_var        - name of variable to change. Possible inputs: 'start_light', 'end_light', 'start_dur', 'end_dur', 'ramp_dur'.
     light_start       - light level at start of experiment (0 to 1)
-    light_end         - light level at end of experiment (0 to 1)
+    light_end         - light level at end (or middle, if third light requested) of experiment (0 to 1)
+    light_return      - third light level of experiment, if requested (0 to 1)
     light_btwn        - light level between experiments (0 to 1)
     start_dur_min     - duration (min) of light level at start of experiment
-    end_dur_min       - duration (min) of light level at end of experiment
+    end_dur_min       - duration (min) of light level at end (or middle, if third light requested) of experiment
+    return_dur_min    - duration (min) of third light level of experiment, if requested
     ramp_dur_sec      - duration (sec) of ramp between light levels
+    ramp2_dur_sec      - duration (sec) of second ramp between light levels, if requested
     min_val           - minimum value of variable to change
     max_val           - maximum value of variable to change
-    num_trial           - number of values of variable to change
+    num_reps          - number of times to repeat each value of variable to change
+    num_trial         - number of values of variable to change
     btwn_period_min   - time (min) between experiments
     pre_ramp_dur_sec  - duration of ramp before experiment starts
     post_ramp_dur_sec - duration of ramp after experiment 
     start_delay_min   - time (min) to wait before starting the experiment
+    fixed_rampdur_sec - optional, additional ramp duration that is fixed and tacked on to vals after linspace generation
     """
     
     # Check inputs
@@ -70,6 +75,7 @@ def make_schedule(schedule_path, change_var=None, light_start=0.5, light_end=Non
             raise ValueError("min_val must be less than max_val")
         if num_trial<2:
             raise ValueError("num_trial must be greater than 2")
+     
 
     # Check ramp durations
     if (pre_ramp_dur_sec+post_ramp_dur_sec)>btwn_period_min*60:
@@ -78,16 +84,16 @@ def make_schedule(schedule_path, change_var=None, light_start=0.5, light_end=Non
         raise ValueError("pre_ramp_dur_sec must be less than start_delay_min*60")
 
     # Identify lack of ramp
-    if (end_dur_min==0) or (ramp_dur_sec==0) or (light_end!=None):
+    if (change_var is None) and ((end_dur_min==0) or (ramp_dur_sec==0) or (light_end!=None)):
         print('NOTE: Creating schedule with no ramps')
 
         # Issue warnings
         if (end_dur_min!=0):
-            raise Warning('Igoring end_dur_min value provided')
+            print('WARNING: Igoring end_dur_min value provided')
         if (ramp_dur_sec!=0):
-            raise Warning('Igoring ramp_dur_sec value provided')
+            print('WARNING: Igoring ramp_dur_sec value provided')
         if (light_end!=None):
-            raise Warning('Igoring light_end value provided')  
+            print('WARNING: Igoring light_end value provided')  
 
     # get current date in the format YYYY-MM-DD and define path for csv file
     date = dt.datetime.now().strftime("%Y-%m-%d")
@@ -113,12 +119,19 @@ def make_schedule(schedule_path, change_var=None, light_start=0.5, light_end=Non
 
     # Make schedule dataframe with 'change_var' as a string and all other variables as floats
     schedule = pd.DataFrame(columns=['trial_num','start_time_min', 
-                                     'light_start', 'light_end', 'light_btwn', 'start_dur_min', 'ramp_dur_sec', 'end_dur_min', 
+                                     'light_start', 'light_end', 'light_return','light_btwn', 'start_dur_min', 'ramp_dur_sec',
+                                     'end_dur_min','ramp2_dur_sec','return_dur_min',
                                      'pre_ramp_dur_sec', 'post_ramp_dur_sec'], dtype='object')
     
     # Make array of values to change
     if change_var is not None:
         vals = np.linspace(min_val, max_val, num_trial)
+        
+        if fixed_rampdur_sec!=None:
+            vals = np.append(vals, fixed_rampdur_sec[0])
+        
+        # Repeat each value num_reps times
+        vals = np.repeat(vals, num_reps)  # Repeat each value num_reps times
 
         # Randomize order of values
         np.random.shuffle(vals)
@@ -131,10 +144,13 @@ def make_schedule(schedule_path, change_var=None, light_start=0.5, light_end=Non
         schedule.loc[i, 'trial_num']        = int(i+1)
         schedule.loc[i, 'light_start']      = light_start
         schedule.loc[i, 'light_end']        = light_end
+        schedule.loc[i, 'light_return']     = light_return
         schedule.loc[i, 'light_btwn']       = light_btwn
         schedule.loc[i, 'start_dur_min']    = start_dur_min
         schedule.loc[i, 'end_dur_min']      = end_dur_min
+        schedule.loc[i, 'return_dur_min']   = return_dur_min
         schedule.loc[i, 'ramp_dur_sec']     = ramp_dur_sec
+        schedule.loc[i, 'ramp2_dur_sec']    = ramp2_dur_sec
         schedule.loc[i, 'pre_ramp_dur_sec'] = pre_ramp_dur_sec
         schedule.loc[i, 'post_ramp_dur_sec']= post_ramp_dur_sec
 
@@ -142,14 +158,21 @@ def make_schedule(schedule_path, change_var=None, light_start=0.5, light_end=Non
     if change_var is not None:
         for i, val in enumerate(vals):
             schedule.loc[i, change_var] = val
+            
+            if change_var=='ramp_dur_sec' and ramp2_dur_sec!=None:
+                schedule.loc[i, 'ramp2_dur_sec'] = val
 
     # Add start times
     for i in range(len(vals)):
         if i==0:
             schedule.loc[i, 'start_time_min'] = start_delay_min
+        elif ramp2_dur_sec!=None:  
+            schedule.loc[i, 'start_time_min'] = schedule.loc[i-1, 'start_time_min'] + btwn_period_min + sum(schedule.loc[i-1, ['start_dur_min', 'end_dur_min','return_dur_min']]) + sum(schedule.loc[i-1, ['ramp_dur_sec', 'ramp2_dur_sec']]/60)
+            ttt=3 
         else:   
             schedule.loc[i, 'start_time_min'] = schedule.loc[i-1, 'start_time_min'] + btwn_period_min + sum(schedule.loc[i-1, ['start_dur_min', 'end_dur_min']]) + schedule.loc[i-1, 'ramp_dur_sec']/60
             ttt=3
+            
 
     # write schedule to csv at schedule_path
     schedule.to_csv(full_path, index=False)
@@ -272,14 +295,17 @@ def run_experiment_schedule(dmx, aud_path, log_path, schedule_path, LED_IP=None,
     for trial in trials:
 
         # Get variables from schedule for current trial
-        light_start = schedule.loc[trial-1, 'light_start']
-        light_end   = schedule.loc[trial-1, 'light_end']
-        light_btwn  = schedule.loc[trial-1, 'light_btwn']
-        pre_dur     = schedule.loc[trial-1, 'pre_ramp_dur_sec']
-        post_dur    = schedule.loc[trial-1, 'post_ramp_dur_sec']
-        start_dur   = schedule.loc[trial-1, 'start_dur_min']
-        end_dur     = schedule.loc[trial-1, 'end_dur_min']
-        ramp_dur    = schedule.loc[trial-1, 'ramp_dur_sec']
+        light_start  = schedule.loc[trial-1, 'light_start']
+        light_end    = schedule.loc[trial-1, 'light_end']
+        light_return = schedule.loc[trial-1, 'light_return']
+        light_btwn   = schedule.loc[trial-1, 'light_btwn']
+        pre_dur      = schedule.loc[trial-1, 'pre_ramp_dur_sec']
+        post_dur     = schedule.loc[trial-1, 'post_ramp_dur_sec']
+        start_dur    = schedule.loc[trial-1, 'start_dur_min']
+        end_dur      = schedule.loc[trial-1, 'end_dur_min']
+        return_dur   = schedule.loc[trial-1, 'return_dur_min']
+        ramp_dur     = schedule.loc[trial-1, 'ramp_dur_sec']
+        ramp2_dur    = schedule.loc[trial-1, 'ramp2_dur_sec']
 
         # While loop to wait until current time is later than next_starttime_obj
         while dt.datetime.now() < next_starttime_obj:
@@ -294,13 +320,19 @@ def run_experiment_schedule(dmx, aud_path, log_path, schedule_path, LED_IP=None,
             analyze_prompt=False, control_hw=control_hw, sch_num=sch_num, trial_num=trial)
 
         # Run experiment (logged)
-        run_program(dmx, aud_path, light_level=[light_start, light_end], light_dur=[start_dur, end_dur], 
-            ramp_dur=ramp_dur, log_path=log_path, trig_video=True, echo=False, plot_data=False, movie_prefix=movie_prefix, LED_IP=LED_IP, analyze_prompt=False, control_hw=control_hw, scene_num=scene_num, shot_num=shot_num, take_num=take_num, sch_num=sch_num, trial_num=trial)
+        run_program(dmx, aud_path, light_level=[light_start, light_end, light_return], light_dur=[start_dur, end_dur, return_dur], 
+            ramp_dur=[ramp_dur, ramp2_dur], log_path=log_path, trig_video=True, echo=False, plot_data=False, movie_prefix=movie_prefix, LED_IP=LED_IP, analyze_prompt=False, control_hw=control_hw, scene_num=scene_num, shot_num=shot_num, take_num=take_num, sch_num=sch_num, trial_num=trial)
 
+        if light_return==None:
         # Run post-experiment ramp (not logged)
-        run_program(dmx, aud_path, light_level=[light_end, light_btwn], light_dur=None, ramp_dur=post_dur, 
-            log_path=None, trig_video=False, echo=False, plot_data=False, movie_prefix=movie_prefix, LED_IP=LED_IP, 
-            analyze_prompt=False, control_hw=control_hw, sch_num=sch_num, trial_num=trial)
+            run_program(dmx, aud_path, light_level=[light_end, light_btwn], light_dur=None, ramp_dur=post_dur, 
+                log_path=None, trig_video=False, echo=False, plot_data=False, movie_prefix=movie_prefix, LED_IP=LED_IP, 
+                analyze_prompt=False, control_hw=control_hw, sch_num=sch_num, trial_num=trial)
+        else:
+            # Run post-experiment ramp (not logged)
+            run_program(dmx, aud_path, light_level=[light_return, light_btwn], light_dur=None, ramp_dur=post_dur, 
+                log_path=None, trig_video=False, echo=False, plot_data=False, movie_prefix=movie_prefix, LED_IP=LED_IP, 
+                analyze_prompt=False, control_hw=control_hw, sch_num=sch_num, trial_num=trial)
         
         # Advance take number
         take_num = take_num + 1
@@ -316,7 +348,7 @@ def run_experiment_schedule(dmx, aud_path, log_path, schedule_path, LED_IP=None,
 
 
 def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_path=None, trig_video=True, 
-        echo=False, plot_data=True, movie_prefix=None, LED_IP=None, analyze_prompt=True, control_hw=True, 
+        echo=False, plot_data=True, movie_prefix=None, LED_IP=None, analyze_prompt=False, control_hw=True, 
         scene_num=1, shot_num=1, take_num=1, sch_num=999, trial_num=0):
     """ 
     Transmits signal to control light intensity via Enttex DMX USB Pro.
@@ -331,7 +363,7 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
     plot_data      - whether to plot the desired timing of light changes
     movie_prefix   - text at the start of the video filenames
     LED_IP         - IP address of smart switch to be controlled 
-    analyze_prompt - Whether to ask whether to prompt to log the experiment
+    analyze_prompt - Whether to ask whether to prompt to log the experiment (Default False)
     control_hw     - Whether to control the hardware (if False, just logs the experiment)
     scene_num      - Scene number for video filename
     shot_num       - Shot number for video filename
@@ -355,8 +387,9 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
     if control_hw and (not os.path.isfile(aud_path)):
         raise OSError("aud_path not found at " + aud_path)
 
-    if (ramp_dur is not None) &  ~np.isscalar(ramp_dur):
-        ramp_dur = ramp_dur[0]
+    # check if ramp_dur is an array
+   # if (ramp_dur is not None) &  ~np.isscalar(ramp_dur):
+       # ramp_dur = ramp_dur[0]
 
     # Dataframe of light and control levels 
     df = make_ramp(light_level, light_dur, ramp_dur, plot_data=plot_data)
@@ -424,22 +457,22 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
         print('    Timecode audio ended.')
 
     # Get info about the video filename
-    if (log_path!=None):
+  #  if (log_path!=None):
+
         
         # Prompt for filename numbers
-        if analyze_prompt:
+       # if analyze_prompt:
 
-            prompt_txt = "Enter scene, shot, and take numbers (e.g. 1 1 " + str(int(prev_take+1)) + "):"
-            scene_num, shot_num, take_num = input(prompt_txt).split()
+          ##  scene_num, shot_num, take_num = input(prompt_txt).split()
 
         # # Otherwise, generate them
         # else:
         #     take_num = prev_take + 1   
 
     # Define current filename
-    curr_scene   = '00' + str(int(scene_num))
-    curr_shot    = '00' + str(int(shot_num))
-    curr_take    = '00' + str(int(take_num))
+    curr_scene   =  "{:03d}".format(scene_num)
+    curr_shot    = "{:03d}".format(shot_num)
+    curr_take    = "{:03d}".format(take_num)
     vid_filename = movie_prefix + '_S' + curr_scene[-3:] + '_S' + curr_shot[-3:] + '_T' + curr_take[-3:]
 
     # If you are logging the ramp . . .
@@ -460,7 +493,7 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
             log_data['start_dur_min'] = [light_dur[0]]
         
         if len(light_level)>1:
-            log_data['ramp_dur_sec'] = ramp_dur
+            log_data['ramp_dur_sec'] = [ramp_dur[0]]
             log_data['light_end']    = [light_level[1]]
             log_data['end_dur_min']  = [light_dur[1]]     
         else:
@@ -468,19 +501,6 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
             log_data['light_end']      = [np.nan]
             log_data['end_dur_min']    = [np.nan]
          
-        # Prompt and record whether to analyze recording
-        if analyze_prompt:
-
-            input_str = input("Analyze experiment [(y)es or (n)o]?")
-            if input_str=='y' or input_str=='Y' or input_str=='yes' or input_str=='YES':
-                log_data['analyze'] = [int(1)]
-                print("    Video WILL be analyzed")
-            else:
-                log_data['analyze'] = [int(0)]
-                print("    Video will NOT be analyzed")
-        else:
-            log_data['analyze'] = [int(1)]
-            print("    Video WILL be analyzed")
 
         # Append new log entry, make new indicies, save CSV log file
         log_curr = pd.DataFrame(log_data)
@@ -506,10 +526,13 @@ def make_ramp(light_level, light_dur=None, ramp_dur=None, plot_data=False):
     """
 
     # Check inputs
-    if (type(light_level)==np.ndarray) and (len(light_level)>2):
-        raise ValueError("This function assumes a max of 2 light levels")
-    elif (type(light_dur)==np.ndarray) and (len(light_dur)>2):
-        raise ValueError("This function assumes a max of 2 light levels")
+    if (type(light_level)==np.ndarray) and (len(light_level)>3):
+       raise ValueError("This function assumes a max of 3 light levels")
+    elif (type(light_dur)==np.ndarray) and (len(light_dur)>3):
+      raise ValueError("This function assumes a max of 2 light levels")
+    elif (type(ramp_dur)==np.ndarray) and (len(ramp_dur)>2):
+      raise ValueError("This function assumes a max of 2 ramps")
+    
 
     # Define time step
     dt = 1/1000
@@ -518,7 +541,7 @@ def make_ramp(light_level, light_dur=None, ramp_dur=None, plot_data=False):
     df = pd.DataFrame(columns=['time','light_level','control_level'], dtype='float')   
 
     # No ramp
-    if ramp_dur==None:
+    if (type(ramp_dur)!=np.ndarray) and ramp_dur==None:
 
         # Check light level
         if len(light_level)>1:
@@ -535,8 +558,9 @@ def make_ramp(light_level, light_dur=None, ramp_dur=None, plot_data=False):
         # Initial light_level values
         df.loc[:, 'light_level'] = light_level
 
-    # Standard ramp with periods before and after
+    # Standard ramp(s) with periods before and after
     elif (type(light_dur)==np.ndarray) or (type(light_dur)==list):
+
         # Define time vector
         tot_dur = np.sum(light_dur*60) + np.sum(ramp_dur)
         df.time = np.linspace(0, tot_dur, int(round(tot_dur/dt)))
@@ -545,13 +569,25 @@ def make_ramp(light_level, light_dur=None, ramp_dur=None, plot_data=False):
         df.loc[df.time<=light_dur[0]*60, 'light_level'] = light_level[0]
 
         # Ramp
-        idx = (df.time<=(light_dur[0]*60+ramp_dur)) & (df.time>light_dur[0]*60)
-        ramp_vals = (light_level[1]-light_level[0])/ramp_dur * (df.time[idx]-light_dur[0]*60) + light_level[0]
+        idx = (df.time<=(light_dur[0]*60+ramp_dur[0])) & (df.time>light_dur[0]*60)
+        ramp_vals = (light_level[1]-light_level[0])/ramp_dur[0] * (df.time[idx]-light_dur[0]*60) + light_level[0]
         df.loc[idx, 'light_level'] = ramp_vals
 
         # Second fixed light level
-        idx = (df.time<=(light_dur[0]*60+ramp_dur+light_dur[1]*60)) & (df.time>(light_dur[0]*60+ramp_dur))
+        idx = (df.time<=(light_dur[0]*60+ramp_dur[0]+light_dur[1]*60)) & (df.time>(light_dur[0]*60+ramp_dur[0]))
         df.loc[idx, 'light_level'] = light_level[1]     
+        
+        # Second ramp and third level, if necessary
+        if len(light_dur)>2:
+
+            # Second Ramp
+            idx = (df.time<=(light_dur[0]*60+ramp_dur[0]+light_dur[1]*60+ramp_dur[1])) & (df.time>(light_dur[0]*60+ramp_dur[0]+light_dur[1]*60))
+            ramp_vals = (light_level[2]-light_level[1])/ramp_dur[1] * (df.time[idx]-(light_dur[0]*60+ramp_dur[0]+light_dur[1]*60))+light_level[1]
+            df.loc[idx, 'light_level'] = ramp_vals
+            
+            # Final fixed light level
+            idx = (df.time<=(sum(light_dur)*60+sum(ramp_dur))) & (df.time>(light_dur[0]*60+ramp_dur[0]+light_dur[1]*60+ramp_dur[1]))
+            df.loc[idx, 'light_level'] = light_level[2]
 
     # If just a ramp
     else:    
@@ -573,3 +609,4 @@ def make_ramp(light_level, light_dur=None, ramp_dur=None, plot_data=False):
         fig.show()
 
     return df    
+

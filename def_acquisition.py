@@ -81,6 +81,7 @@ def measure_pixintensity(cat, data_path, vid_path):
 
         # Turn off connection to video file
         cv.destroyAllWindows()
+        
 
 def make_mask(im, roi, mask_path, date, sch_num, trial_num):
     """ Make a mask for a video
@@ -149,9 +150,9 @@ def raw_to_mat(cat, path):
     # Loop thru each experiment
     for expt_c in cat.index:
 
-        # Define trial filename
-        trialnum = str(int(cat.trial_num[expt_c]))
-        trialnum = '00' + trialnum[-3:]
+        # Define trial and schedule strings
+        trialnum = str(int(cat.trial_num[expt_c])).zfill(3)
+        schnum = str(int(cat.sch_num[expt_c])).zfill(3)
 
         schnum = str(int(cat.sch_num[expt_c]))
         schnum = '00' + schnum[-3:]
@@ -183,7 +184,7 @@ def raw_to_mat(cat, path):
                     dict_c[field_c] = b[field_c]
 
                 # Path for current mat file
-                out_path = path['data_raw'] + os.sep + os.path.basename(raw_c)[:-4] + '.mat'
+                out_path = path['data_mat'] + os.sep + os.path.basename(raw_c)[:-4] + '.mat'
 
                 # Save dictionary data to a mat file
                 savemat(out_path, dict_c)
