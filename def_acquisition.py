@@ -153,7 +153,7 @@ def raw_to_mat(cat, path):
         trialnum = str(int(cat.trial_num[expt_c]))
         trialnum = '00' + trialnum[-3:]
 
-        schnum = str(int(cat.sch_num[c_row]))
+        schnum = str(int(cat.sch_num[expt_c]))
         schnum = '00' + schnum[-3:]
 
         datetrial_name = cat.date[expt_c] + '_sch' + schnum + '_tr' + trialnum
