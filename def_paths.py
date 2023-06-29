@@ -1,8 +1,10 @@
 import os
 import pandas as pd
+import tkinter as tk
+import screeninfo
 
 
-def give_paths(root_path, proj_name, code_path=None):
+def give_paths(root_path, proj_name):
     """
     Function for defining the subdirectories for all code in the project directory.
     """
@@ -10,41 +12,57 @@ def give_paths(root_path, proj_name, code_path=None):
     data_path = root_path + os.sep + 'data' + os.sep + proj_name
     vid_path = root_path + os.sep + 'video' + os.sep + proj_name
 
-    if not os.path.exists(data_path):
-        os.mkdir(data_path)
-    
-    if not os.path.exists(vid_path):
-        os.mkdir(vid_path)
+    if (not os.path.exists(data_path)) and (not os.path.exists(vid_path)):
+        # Show the confirmation dialog
+        ans = show_confirmation_dialog('No project folders found. Create a new project in data and video folders?')
 
-    #  raise exception if project paths do not exist
-    # if not os.path.exists(data_path):
-    #     raise Exception('Data path does not exist: ' + data_path)
-    # if not os.path.exists(vid_path):
-    #     raise Exception('Video path does not exist: ' + vid_path)
+        if ans:
+            # Create the project folders
+            os.mkdir(data_path)
+            os.mkdir(vid_path)
+        else:
+            # Exit the function
+            return None
+
+    elif (not os.path.exists(data_path)) and os.path.exists(vid_path):
+        ans = show_confirmation_dialog('Project found in video, but not in data. Create a new project in data?')
+
+        if ans:
+            # Create the project folders
+            os.mkdir(data_path)
+        else:
+            # Exit the function
+            return None
     
-    # raise exception if code_path is not None and code_path does not exist
-    # if (code_path is not None) and (not os.path.exists(code_path)):
-    #     raise Exception('Code path does not exist: ' + code_path)
+    elif (os.path.exists(data_path)) and (not os.path.exists(vid_path)):
+        ans = show_confirmation_dialog('Project found in data, but not in video. Create a new project in video?')
+
+        if ans:
+            # Create the project folders
+            os.mkdir(video_path)
+        else:
+            # Exit the function
+            return None
     
     # Directory structure wrt root folders
     paths = {
         # Path to data
-        'data': data_path + os.sep + 'data',
+        'data': data_path,
 
         # Path to videos
-        'video': vid_path + os.sep,
+        'video': vid_path,
 
         # Path to experiment catalog file
-        'data_raw': data_path + os.sep + 'data' + os.sep + 'raw',
+        'data_raw': data_path + os.sep + 'raw',
 
         # Path to experiment catalog file
-        'data_mat': data_path + os.sep + 'data' + os.sep + 'matlab',
+        'data_mat': data_path + os.sep + 'matlab',
 
         # Path to experiment catalog file
-        'data_mat_vid': data_path + os.sep + 'data' + os.sep + 'matlab'+ os.sep + 'video',
+        'data_mat_vid': data_path + os.sep + 'matlab'+ os.sep + 'video',
 
         # Path to settings file
-        'settings': data_path + os.sep + 'data' + os.sep + 'settings',
+        'settings': data_path + os.sep + 'settings',
 
         # Path to raw videos
         'vidin': vid_path + os.sep + 'raw',
@@ -79,10 +97,6 @@ def give_paths(root_path, proj_name, code_path=None):
 
      # Path to experiment catalog file
     paths['cat']= data_path + os.sep + 'experiment_log.csv'
-
-    # add 'kinekit path to paths, if code_path is not None
-    # if code_path is not None:
-    #     paths['kinekit'] = code_path + os.sep + 'kineKit'
     
     # Create a recording log file if it does not exist
     log_path = data_path + os.sep + 'recording_log.csv'
@@ -100,7 +114,7 @@ def give_paths(root_path, proj_name, code_path=None):
         # Create an empty pandas dataframe with the column headings of 'date', 'sch_num','trail_num', write to disk
         cat = pd.DataFrame(columns=['date','sch_num','trial_num','school_id',
                                     'exp_type','neo_treat','fish_num',
-                                    'video_filename','roi_x','roi_y','roi_w','roi_h','mask_filename',
+                                    'video_filename','mask_filename',
                                     'analyze','make_video','run_matlab',
                                     'cal_video_filename','fr_width_cm','cm_per_pix',
                                     'threshold','blob_size_range',
@@ -111,3 +125,72 @@ def give_paths(root_path, proj_name, code_path=None):
         print('Created experiment log: ' + paths['cat'])
 
     return paths
+
+
+def get_screen_resolution():
+    """Get the screen resolution.
+    Returns:
+        width (int): Screen width.
+        height (int): Screen height."""
+    
+    screen_info = screeninfo.get_monitors()
+    width = screen_info[0].width
+    height = screen_info[0].height
+    return width, height
+
+
+def show_confirmation_dialog(quest_text):
+    # Create the main window
+    root = tk.Tk()
+    root.title("Confirmation")
+
+    # Define the font for the question
+    question_font = ("Arial", 40)
+
+    # Create a label for the question
+    question_label = tk.Label(root, text=quest_text, font=question_font)
+    question_label.pack(padx=20, pady=20)
+
+    # Initialize the answer variable
+    answer = None
+
+    # Function to handle the "Yes" button click
+    def on_yes():
+        nonlocal answer
+        answer = True
+        root.destroy()
+
+    # Function to handle the "No" button click
+    def on_no():
+        nonlocal answer
+        answer = False
+        root.destroy()
+
+    # Create the "Yes" button
+    yes_button = tk.Button(root, text="Yes", font=("Arial", 24), command=on_yes)
+    yes_button.pack(padx=10, pady=10)
+
+    # Create the "No" button
+    no_button = tk.Button(root, text="No", font=("Arial", 24), command=on_no)
+    no_button.pack(padx=10, pady=10)
+
+    # Get screen resolution
+    screen_width, screen_height = get_screen_resolution()
+
+    # Get the window size
+    window_width = root.winfo_reqwidth()
+    window_height = root.winfo_reqheight()
+
+    # Calculate the position for the GUI window to appear centered
+    position_x = int((screen_width - window_width) / 2)
+    position_y = int((screen_height - window_height) / 2)
+
+    # Set the position of the GUI window on the screen
+    root.geometry(f"+{position_x}+{position_y}")
+
+    # Start the GUI main loop
+    root.mainloop()
+
+    return answer
+
+
