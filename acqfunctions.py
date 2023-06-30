@@ -11,7 +11,7 @@ def report_version():
 
     print("v.6")
 
-def get_cat_info(cat_path, include_mode='both'):
+def get_cat_info(cat_path, include_mode='both', exclude_mode=None):
     """ Extracts key parameters from experiment catalog for making videos from image sequence.
     Videos included are the ones where analyze==1 and make_video==1.
 
@@ -19,6 +19,7 @@ def get_cat_info(cat_path, include_mode='both'):
     
     cat_path:  Full path to video catalog (CSV file)
     include_mode: Criteria for what to include. Can be 'analyze', 'make_video', or 'both'
+    exclude_mode: Criteria for what to exclude. Can be 'calibration' or None
 
     """
 
@@ -37,6 +38,10 @@ def get_cat_info(cat_path, include_mode='both'):
         
     elif include_mode=='make_video':
         d = d.loc[(d.make_video == 1)]
+
+    # Determine which rows to exclude
+    if exclude_mode == 'calibration':
+        d = d.loc[(d.sch_num != 999)]
 
     # Reset indices for the new rows
     d = d.reset_index(drop=True)
