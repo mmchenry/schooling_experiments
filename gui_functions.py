@@ -479,3 +479,132 @@ def measure_length(frame, title='Measure Length'):
 
     # Return the polygon points
     return distance
+
+
+def interactive_threshold(im, im_mean):
+    """Apply interactive thresholding to identify darker regions.
+    Args:
+        im (np.array): Image to threshold.
+        im_mean (np.array): Mean image.
+    Returns:
+        threshold (int): Threshold value.
+        im_thresh (np.array): Thresholded image.
+    """
+
+    # Check that the images are grayscale
+    dim_im = im.shape
+    dim_immean = im_mean.shape
+    if len(dim_im)>2:
+        raise ValueError('Image must be grayscale.')
+    elif len(dim_immean)>2:
+        raise ValueError('Mean image must be grayscale.')
+
+    # check that the dimensions of the two images are the same
+    if dim_im != dim_immean:
+        raise ValueError('Image and mean image must have the same dimensions.')
+    
+    # Name of figure window
+    win_name = 'Select Threshold'
+
+    print('Select a threshold value to identify darker regions. Press \'q\' or \'return\' to quit.')
+
+    # Create a window to display the image
+    create_cv_window(win_name)
+
+    # Create a trackbar to adjust the threshold
+    def on_trackbar_change(value):
+        # Apply thresholding to the image
+        im_thresholded = vp.adjust_threshold(im, im_mean, value)
+
+        # Display the thresholded image
+        cv2.imshow(win_name, im_thresholded)
+
+    # Set an initial threshold value
+    initial_threshold = 20
+
+    # Create a trackbar
+    cv2.createTrackbar('Threshold',win_name, initial_threshold, 90, on_trackbar_change)
+
+    # Initialize the thresholded image
+    im_thresholded = vp.adjust_threshold(im, im_mean, initial_threshold)
+
+    # Display the initial thresholded image
+    cv2.imshow(win_name, im_thresholded)
+
+    # Wait until the user closes the window
+    while True:
+        key = cv2.waitKey(1) & 0xFF
+        if (key == ord('q')) or (key==13):
+            break
+
+    # Retrieve the final threshold value
+    threshold = cv2.getTrackbarPos('Threshold', win_name)
+
+    cv2.destroyAllWindows()
+    return threshold, im_thresholded
+
+
+def interactive_blob_filter(im, im_mean, threshold):
+    """Apply interactive blob filtering.
+    Args:
+        im (np.array): Image to threshold.
+        im_mean (np.array): Mean image.
+        threshold (int): Threshold value.
+    Returns:
+        min_area (int): Minimum area.
+        max_area (int): Maximum area.
+    """
+
+    # Name of figure window
+    win_name = 'Blob Filter'
+
+    # Create a window to display the image
+    create_cv_window(win_name)
+
+    # Initialize the minimum and maximum blob sizes
+    initial_min_area = 100
+    initial_max_area = 1000
+
+    # Create track bars for minimum and maximum blob sizes
+    def on_min_area_change(value):
+        # Get the current maximum blob size
+        max_area = cv2.getTrackbarPos('Max Area', win_name)
+
+        # Apply blob filtering to the image
+        filtered_im = vp.filter_blobs(im, im_mean, threshold, value, max_area)
+
+        # Display the filtered image
+        cv2.imshow('Blob Filter', filtered_im)
+
+    def on_max_area_change(value):
+        # Get the current minimum blob size
+        min_area = cv2.getTrackbarPos('Min Area', win_name)
+
+        # Apply blob filtering to the image
+        filtered_im = vp.filter_blobs(im, im_mean, threshold, min_area, value)
+
+        # Display the filtered image
+        cv2.imshow(win_name, filtered_im)
+
+    # Create trackbars
+    cv2.createTrackbar('Min Area', win_name, initial_min_area, 1000, on_min_area_change)
+    cv2.createTrackbar('Max Area', win_name, initial_max_area, 1000, on_max_area_change)
+
+    # Apply initial blob filtering to the image
+    filtered_im = vp.filter_blobs(im, im_mean, threshold, initial_min_area, initial_max_area)
+
+    # Display the initial filtered image
+    cv2.imshow(win_name, filtered_im)
+
+    # Wait until the user closes the window
+    while True:
+        key = cv2.waitKey(1) & 0xFF
+        if (key == ord('q')) or (key==13):
+            break
+
+    # Retrieve the final minimum and maximum blob sizes
+    min_area = cv2.getTrackbarPos('Min Area', win_name)
+    max_area = cv2.getTrackbarPos('Max Area', win_name)
+
+    cv2.destroyAllWindows()
+    return min_area, max_area

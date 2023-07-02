@@ -120,7 +120,7 @@ def give_paths(root_path, proj_name):
                                     'video_filename','mask_filename',
                                     'analyze','make_video','run_matlab',
                                     'cal_video_filename','fr_width_cm','cm_per_pix',
-                                    'threshold','blob_size_range',
+                                    'threshold','min_area','max_area',
                                     'meta_conditions','meta_species','meta_misc',
                                     'track_threshold','blob_size_ranges','track_max_speed',
                                     'meta_real_width','settings_file','Notes'])

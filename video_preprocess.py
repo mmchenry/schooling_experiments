@@ -204,6 +204,9 @@ def read_frame(cap, idx, im_mask=None, mask_perim=None, im_crop=False, outside_c
     cap.set(cv2.CAP_PROP_POS_FRAMES, idx)
     _, frame = cap.read()
 
+    if frame is None:
+        raise ValueError(f"Invalid frame at index {idx}")
+
     if color_mode=='grayscale':
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
 
@@ -216,47 +219,47 @@ def read_frame(cap, idx, im_mask=None, mask_perim=None, im_crop=False, outside_c
         # Apply mask to frame
         masked_frame = cv2.bitwise_and(frame, frame, mask=im_mask)
 
-    # Apply color outside of image
-    if outside_clr=='common':
-        if color_mode=='grayscale':
-            # Calculate the mode of the masked frame
-            mode = int(np.median(masked_frame[masked_frame > 0]))
+        # Apply color outside of image
+        if outside_clr=='common':
+            if color_mode=='grayscale':
+                # Calculate the mode of the masked frame
+                mode = int(np.median(masked_frame[masked_frame > 0]))
 
-            # Set the area outside the ellipse to the mode
-            masked_frame[np.where(im_mask == 0)] = mode
-        else:
-            # Calculate the mode individually for each color channel within the masked frame
-            channel_modes = [int(np.median(masked_frame[:, :, i][masked_frame[:, :, i] > 0])) for i in range(3)]
+                # Set the area outside the ellipse to the mode
+                masked_frame[np.where(im_mask == 0)] = mode
+            else:
+                # Calculate the mode individually for each color channel within the masked frame
+                channel_modes = [int(np.median(masked_frame[:, :, i][masked_frame[:, :, i] > 0])) for i in range(3)]
 
-            # Create the most common RGB color from the channel modes
-            most_common_color = tuple(channel_modes)
+                # Create the most common RGB color from the channel modes
+                most_common_color = tuple(channel_modes)
 
-            # Set the area outside the ellipse to the most common color
-            masked_frame[np.where(im_mask == 0)] = most_common_color
+                # Set the area outside the ellipse to the most common color
+                masked_frame[np.where(im_mask == 0)] = most_common_color
 
-    elif outside_clr=='gray':
-        if color_mode=='grayscale':
-            masked_frame[np.where(im_mask == 0)] = 128
-        else:
-            # Set the area outside the ellipse to gray
-            masked_frame[np.where(im_mask == 0)] = (128, 128, 128)
+        elif outside_clr=='gray':
+            if color_mode=='grayscale':
+                masked_frame[np.where(im_mask == 0)] = 128
+            else:
+                # Set the area outside the ellipse to gray
+                masked_frame[np.where(im_mask == 0)] = (128, 128, 128)
 
-    elif outside_clr=='white':
-        if color_mode=='grayscale':
-            masked_frame[np.where(im_mask == 0)] = 255
-        else:
-            # Set the area outside the ellipse to gray
-            masked_frame[np.where(im_mask == 0)] = (255, 255, 255)
+        elif outside_clr=='white':
+            if color_mode=='grayscale':
+                masked_frame[np.where(im_mask == 0)] = 255
+            else:
+                # Set the area outside the ellipse to gray
+                masked_frame[np.where(im_mask == 0)] = (255, 255, 255)
 
-    elif outside_clr=='black':
-        if color_mode=='grayscale':
-            masked_frame[np.where(im_mask == 0)] = 0
-        else:
-            # Set the area outside the ellipse to gray
-            masked_frame[np.where(im_mask == 0)] = (0, 0, 0)
+        elif outside_clr=='black':
+            if color_mode=='grayscale':
+                masked_frame[np.where(im_mask == 0)] = 0
+            else:
+                # Set the area outside the ellipse to gray
+                masked_frame[np.where(im_mask == 0)] = (0, 0, 0)
 
-    # Replace the frame with the masked frame
-    frame = masked_frame
+        # Replace the frame with the masked frame
+        frame = masked_frame
 
     # Crop image to the perimeter of the mask
     if im_crop:
@@ -378,3 +381,51 @@ def make_max_mean_image(cat_curr, sch, vid_path, max_num_frames, im_mask=None, m
     mean_image = np.round(mean_image).astype(np.uint8)
 
     return mean_image
+
+def adjust_threshold(im, im_mean, threshold):
+    """Adjust the threshold to identify darker regions.
+    Args:
+        im (np.array): Image to threshold.
+        im_mean (np.array): Mean image.
+        threshold (int): Threshold value.
+    Returns:
+        im_thresh (np.array): Thresholded image.
+        """
+    # Compute absolute difference between im and im_mean
+    im_diff = cv2.absdiff(im, im_mean)
+
+    # Apply a threshold to identify darker regions
+    _, im_thresh = cv2.threshold(im_diff, threshold, 255, cv2.THRESH_BINARY)
+
+    return im_thresh
+
+
+def filter_blobs(im, im_mean, threshold, min_area, max_area):
+    """Filter blobs based on area.
+    Args:
+        im (np.array): Image to threshold.
+        im_mean (np.array): Mean image.
+        threshold (int): Threshold value.
+        min_area (int): Minimum area.
+        max_area (int): Maximum area.
+    Returns:
+        filtered_im (np.array): Filtered image.
+    """
+
+    # Convert image to binary
+    im_thresh = adjust_threshold(im, im_mean, threshold)
+
+    # Find contours in the thresholded image
+    contours, _ = cv2.findContours(im_thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    # Filter contours based on area
+    filtered_contours = [contour for contour in contours if min_area <= cv2.contourArea(contour) <= max_area]
+
+    # Create a binary mask for the filtered contours
+    mask = np.zeros_like(im_thresh)
+    cv2.drawContours(mask, filtered_contours, -1, (255), thickness=cv2.FILLED)
+
+    # Apply the mask to the original image
+    filtered_im = cv2.bitwise_and(im, im, mask=mask)
+
+    return filtered_im
