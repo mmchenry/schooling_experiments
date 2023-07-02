@@ -79,6 +79,9 @@ def give_paths(root_path, proj_name):
         # Mask file
         'mask': data_path + os.sep + 'masks',
 
+        # Mean image file
+        'mean': data_path + os.sep + 'mean_images',
+
         # For calibration images
         'imcal': data_path + os.sep + 'calibration_images',
 
