@@ -7,6 +7,8 @@ import cv2
 import numpy as np
 import pandas as pd
 import subprocess
+import gui_functions as gf
+import time
 
 
 def find_schedule_matches(csv_dir, match_dir):
@@ -382,6 +384,7 @@ def make_max_mean_image(cat_curr, sch, vid_path, max_num_frames, im_mask=None, m
 
     return mean_image
 
+
 def adjust_threshold(im, im_mean, threshold):
     """Adjust the threshold to identify darker regions.
     Args:
@@ -400,7 +403,7 @@ def adjust_threshold(im, im_mean, threshold):
     return im_thresh
 
 
-def filter_blobs(im, im_mean, threshold, min_area, max_area):
+def filter_blobs(im, im_mean, threshold, min_area, max_area, white_blobs=False):
     """Filter blobs based on area.
     Args:
         im (np.array): Image to threshold.
@@ -408,6 +411,7 @@ def filter_blobs(im, im_mean, threshold, min_area, max_area):
         threshold (int): Threshold value.
         min_area (int): Minimum area.
         max_area (int): Maximum area.
+        white_blobs (bool): If True, filter white blobs. If False, the images within the blobs are visible.
     Returns:
         filtered_im (np.array): Filtered image.
     """
@@ -426,6 +430,119 @@ def filter_blobs(im, im_mean, threshold, min_area, max_area):
     cv2.drawContours(mask, filtered_contours, -1, (255), thickness=cv2.FILLED)
 
     # Apply the mask to the original image
-    filtered_im = cv2.bitwise_and(im, im, mask=mask)
+    if not white_blobs:
+        filtered_im = cv2.bitwise_and(im, im, mask=mask)
+    else:
+        # make the blobs white in the filtered image
+        filtered_im = np.zeros_like(im)
+        filtered_im[mask != 0] = 255
 
     return filtered_im
+
+
+def fill_and_smooth(image, num_iterations=3, kernel_size=3):
+    """Fill holes in the image and smooth the edges.
+    Args:
+        image (np.array): Image to fill and smooth.
+        num_iterations (int): Number of dilation and erosion cycles.
+        kernel_size (int): Size of the kernel for dilation and erosion.
+    Returns:
+        smoothed (np.array): Smoothed image.
+    """
+
+    # Find contours of white blobs
+    contours, _ = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    # Create a mask for filling the blobs
+    mask = np.zeros_like(image)
+
+    # Fill each contour with white color
+    for contour in contours:
+        cv2.drawContours(mask, [contour], 0, 255, -1)
+
+    # Perform cycles of dilation and erosion to smooth the blobs
+    kernel = np.ones((kernel_size, kernel_size), np.uint8)
+    smoothed = mask.copy()
+
+    for _ in range(num_iterations):
+        dilated = cv2.dilate(smoothed, kernel, iterations=1)
+        smoothed = cv2.erode(dilated, kernel, iterations=1)
+    
+    # Dilate the smoothed image one more time
+    dilated = cv2.dilate(smoothed, kernel, iterations=1)
+
+    return smoothed
+
+
+def make_binary_movie(vid_path_in, vid_path_out, mean_image, threshold, min_area, max_area, im_mask=None, mask_perim=None, im_crop=True, status_txt=None):
+    """Make a binary movie from a video.
+    Args:
+        vid_path_in (str): Path to input video.
+        vid_path_out (str): Path to output video.
+        mean_image (np.array): Mean image.
+        threshold (int): Threshold value.
+        min_area (int): Minimum area.
+        max_area (int): Maximum area.
+        im_mask (np.array): Image mask.
+        mask_perim (int): Mask perimeter.
+        im_crop (bool): If True, crop the image.
+    Returns:
+        None
+    """
+
+    # Check that mask_perim is defined, if im_mask is given
+    if im_mask is not None:
+        if mask_perim is None:
+            raise ValueError("mask_perim must be defined if im_mask is given.")
+        
+    if im_crop is True:
+        if im_mask is None:
+            raise ValueError("im_mask must be defined if im_crop is True.")
+
+    # Define the codec to use for video encoding
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Specify the video codec (e.g., 'mp4v' for MP4)
+
+    # Set up input video and properties
+    vid_in  = cv2.VideoCapture(vid_path_in)
+    num_frames = int(vid_in.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    # Read the first frame
+    im = read_frame(vid_in, 0, im_mask=im_mask, mask_perim=mask_perim, im_crop=True, outside_clr='white', color_mode='grayscale')
+
+    # Create video writer object for am mp4 video that otherwise has the same properties as input video
+    vid_out = cv2.VideoWriter(vid_path_out, fourcc, int(vid_in.get(cv2.CAP_PROP_FPS)), (im.shape[1], im.shape[0]), isColor=False)
+
+    # Start time for calculating elapsed time
+    start_time = time.time()  
+
+    # Create loop thru all frames
+    for frame_num in range(num_frames):
+    # for frame_num in range(30):
+
+        # Read the current frame
+        im = read_frame(vid_in, frame_num, im_mask=im_mask, mask_perim=mask_perim, im_crop=True, outside_clr='white', color_mode='grayscale')
+
+        # Apply the filter_blobs function to the current frame
+        im_thresh = filter_blobs(im, mean_image, threshold, min_area, max_area, white_blobs=True)  
+
+        # Fill and smooth the blobs in im_thresh
+        im_thresh2 = fill_and_smooth(im_thresh)
+
+        # Write the frame to the output video
+        vid_out.write(im_thresh2)
+
+        # Print progress, every 100 frames
+        if frame_num % 100 == 0:
+            elapsed_time = time.time() - start_time
+            frames_processed = frame_num + 1
+            frames_remaining = num_frames - frames_processed
+            time_per_frame = elapsed_time / frames_processed
+            time_remaining = frames_remaining * time_per_frame / 60
+
+            print('   ' + status_txt + ': Finished frame {} of {}. Estimated time remaining: {:.1f} min'.format(
+                frame_num+1, num_frames, time_remaining))
+    
+    # close video
+    vid_in.release()
+    vid_out.release()
+
