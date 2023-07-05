@@ -385,8 +385,8 @@ def make_max_mean_image(cat_curr, sch, vid_path, max_num_frames, im_mask=None, m
     return mean_image
 
 
-def adjust_threshold(im, im_mean, threshold):
-    """Adjust the threshold to identify darker regions.
+def threshold_diff_image(im, im_mean, threshold):
+    """Generates binary image based on difference from mean image
     Args:
         im (np.array): Image to threshold.
         im_mean (np.array): Mean image.
@@ -397,33 +397,49 @@ def adjust_threshold(im, im_mean, threshold):
     # Compute absolute difference between im and im_mean
     im_diff = cv2.absdiff(im, im_mean)
 
-    # Apply a threshold to identify darker regions
+    # Apply a threshold 
     _, im_thresh = cv2.threshold(im_diff, threshold, 255, cv2.THRESH_BINARY)
 
     return im_thresh
 
 
-def filter_blobs(im, im_mean, threshold, min_area, max_area, white_blobs=False):
-    """Filter blobs based on area.
+def filter_blobs(im, im_mean, threshold, min_area, max_area, max_aspect_ratio=0.1, white_blobs=False):
+    """Filter blobs based on area and aspect ratio.
     Args:
         im (np.array): Image to threshold.
         im_mean (np.array): Mean image.
         threshold (int): Threshold value.
         min_area (int): Minimum area.
         max_area (int): Maximum area.
+        max_aspect_ratio (float): Maximum aspect ratio (width/height) allowed for blobs.
         white_blobs (bool): If True, filter white blobs. If False, the images within the blobs are visible.
     Returns:
         filtered_im (np.array): Filtered image.
     """
 
     # Convert image to binary
-    im_thresh = adjust_threshold(im, im_mean, threshold)
+    im_thresh = threshold_diff_image(im, im_mean, threshold)
 
     # Find contours in the thresholded image
     contours, _ = cv2.findContours(im_thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    # Filter contours based on area
-    filtered_contours = [contour for contour in contours if min_area <= cv2.contourArea(contour) <= max_area]
+    # Filter individual blobs based on area and aspect ratio
+    filtered_contours = []
+    for contour in contours:
+        # Calculate the total area of white pixels for each contour
+        mask = np.zeros_like(im_thresh)
+        cv2.drawContours(mask, [contour], -1, (255), thickness=cv2.FILLED)
+        total_area = np.sum(im_thresh[mask != 0] > 0)
+
+        # Calculate the bounding rectangle of the contour
+        x, y, w, h = cv2.boundingRect(contour)
+
+        # Calculate the aspect ratio
+        aspect_ratio = float(w) / h
+
+        # Filter based on area and aspect ratio
+        if min_area <= total_area <= max_area and aspect_ratio >= max_aspect_ratio:
+            filtered_contours.append(contour)
 
     # Create a binary mask for the filtered contours
     mask = np.zeros_like(im_thresh)
@@ -438,6 +454,7 @@ def filter_blobs(im, im_mean, threshold, min_area, max_area, white_blobs=False):
         filtered_im[mask != 0] = 255
 
     return filtered_im
+
 
 
 def fill_and_smooth(image, num_iterations=3, kernel_size=3):
@@ -474,7 +491,8 @@ def fill_and_smooth(image, num_iterations=3, kernel_size=3):
     return smoothed
 
 
-def make_binary_movie(vid_path_in, vid_path_out, mean_image, threshold, min_area, max_area, im_mask=None, mask_perim=None, im_crop=True, status_txt=None):
+def make_binary_movie(vid_path_in, vid_path_out, mean_image, threshold, min_area, max_area, 
+                      im_mask=None, mask_perim=None, im_crop=True, status_txt=None, thresh_tol=0.05, echo=False):
     """Make a binary movie from a video.
     Args:
         vid_path_in (str): Path to input video.
@@ -486,6 +504,7 @@ def make_binary_movie(vid_path_in, vid_path_out, mean_image, threshold, min_area
         im_mask (np.array): Image mask.
         mask_perim (int): Mask perimeter.
         im_crop (bool): If True, crop the image.
+        thresh_tol (float): Threshold tolerance. Determines what proportion of blob area to trigger change in threshold.
     Returns:
         None
     """
@@ -506,8 +525,11 @@ def make_binary_movie(vid_path_in, vid_path_out, mean_image, threshold, min_area
     vid_in  = cv2.VideoCapture(vid_path_in)
     num_frames = int(vid_in.get(cv2.CAP_PROP_FRAME_COUNT))
 
-    # Read the first frame
+    # Read the first frame, find initial total area of blobs
     im = read_frame(vid_in, 0, im_mask=im_mask, mask_perim=mask_perim, im_crop=True, outside_clr='white', color_mode='grayscale')
+    im_thresh = filter_blobs(im, mean_image, threshold, min_area, max_area, white_blobs=True)  
+    im_thresh2 = fill_and_smooth(im_thresh)
+    total_area0 = np.sum(im_thresh2 > 0)
 
     # Create video writer object for am mp4 video that otherwise has the same properties as input video
     vid_out = cv2.VideoWriter(vid_path_out, fourcc, int(vid_in.get(cv2.CAP_PROP_FPS)), (im.shape[1], im.shape[0]), isColor=False)
@@ -515,18 +537,57 @@ def make_binary_movie(vid_path_in, vid_path_out, mean_image, threshold, min_area
     # Start time for calculating elapsed time
     start_time = time.time()  
 
+    num_frames = 100
+
     # Create loop thru all frames
     for frame_num in range(num_frames):
     # for frame_num in range(30):
 
+        # This mode dictates whether the threshold is being adjusted
+        adjusting_threshold = True
+
+        # Previous value for threshold
+        threshold_prev = threshold
+
+        # Number of threshold adjustments
+        adjustments = 0
+
         # Read the current frame
         im = read_frame(vid_in, frame_num, im_mask=im_mask, mask_perim=mask_perim, im_crop=True, outside_clr='white', color_mode='grayscale')
 
-        # Apply the filter_blobs function to the current frame
-        im_thresh = filter_blobs(im, mean_image, threshold, min_area, max_area, white_blobs=True)  
+        while adjusting_threshold:
 
-        # Fill and smooth the blobs in im_thresh
-        im_thresh2 = fill_and_smooth(im_thresh)
+            # Apply the filter_blobs function to the current frame
+            im_thresh = filter_blobs(im, mean_image, threshold, min_area, max_area, white_blobs=True)  
+
+            # Fill and smooth the blobs in im_thresh
+            im_thresh2 = fill_and_smooth(im_thresh)
+
+            # Calculate the total area of the blobs
+            total_area = np.sum(im_thresh2 > 0)
+
+            # Quit loop if the area has not changed much
+            if (total_area/total_area0) < (1+thresh_tol) and \
+                (total_area/total_area0) > (1-thresh_tol):
+                adjusting_threshold = False
+
+            # Quit loop if threshold has been adjusted more than once and returned to initial value
+            elif (adjustments > 1) and (threshold == threshold_prev):
+                adjusting_threshold = False
+
+            # Increase threshold if area has increased much
+            elif (total_area/total_area0) >= (1+thresh_tol):
+                threshold = threshold + 1
+                adjustments += 1
+                if echo:
+                    print('   ' + status_txt + ' Frame {} : Increasing threshold to {}'.format(frame_num+1, threshold))
+
+            # Decrease threshold if area has decreased much
+            elif (total_area/total_area0) <= (1-thresh_tol):
+                threshold = threshold - 1
+                adjustments += 1
+                if echo:
+                    print('   ' + status_txt + ' Frame {} : Decreasing threshold to {}'.format(frame_num+1, threshold))
 
         # Write the frame to the output video
         vid_out.write(im_thresh2)

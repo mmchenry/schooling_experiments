@@ -514,7 +514,7 @@ def interactive_threshold(im, im_mean):
     # Create a trackbar to adjust the threshold
     def on_trackbar_change(value):
         # Apply thresholding to the image
-        im_thresholded = vp.adjust_threshold(im, im_mean, value)
+        im_thresholded = vp.threshold_diff_image(im, im_mean, value)
 
         # Display the thresholded image
         cv2.imshow(win_name, im_thresholded)
@@ -526,7 +526,7 @@ def interactive_threshold(im, im_mean):
     cv2.createTrackbar('Threshold',win_name, initial_threshold, 90, on_trackbar_change)
 
     # Initialize the thresholded image
-    im_thresholded = vp.adjust_threshold(im, im_mean, initial_threshold)
+    im_thresholded = vp.threshold_diff_image(im, im_mean, initial_threshold)
 
     # Display the initial thresholded image
     cv2.imshow(win_name, im_thresholded)
@@ -587,8 +587,8 @@ def interactive_blob_filter(im, im_mean, threshold):
         cv2.imshow(win_name, filtered_im)
 
     # Create trackbars
-    cv2.createTrackbar('Min Area', win_name, initial_min_area, 1000, on_min_area_change)
-    cv2.createTrackbar('Max Area', win_name, initial_max_area, 1000, on_max_area_change)
+    cv2.createTrackbar('Min Area', win_name, initial_min_area, 600, on_min_area_change)
+    cv2.createTrackbar('Max Area', win_name, initial_max_area, 600, on_max_area_change)
 
     # Apply initial blob filtering to the image
     filtered_im = vp.filter_blobs(im, im_mean, threshold, initial_min_area, initial_max_area)
