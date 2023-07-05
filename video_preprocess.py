@@ -537,7 +537,8 @@ def make_binary_movie(vid_path_in, vid_path_out, mean_image, threshold, min_area
     # Start time for calculating elapsed time
     start_time = time.time()  
 
-    num_frames = 100
+    # Smaller number of frames for testing
+    # num_frames = 100
 
     # Create loop thru all frames
     for frame_num in range(num_frames):
