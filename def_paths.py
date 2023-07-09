@@ -117,13 +117,11 @@ def give_paths(root_path, proj_name):
         # Create an empty pandas dataframe with the column headings of 'date', 'sch_num','trail_num', write to disk
         cat = pd.DataFrame(columns=['date','sch_num','trial_num','school_id',
                                     'exp_type','neo_treat','fish_num',
-                                    'video_filename','mask_filename',
-                                    'analyze','make_video','run_matlab',
-                                    'cal_video_filename','fr_width_cm','cm_per_pix',
+                                    'video_filename',
+                                    'analyze','make_video','run_tgrabs','run_trex','run_matlab',
+                                    'cal_video_filename','cm_per_pix',
                                     'threshold','min_area','max_area',
-                                    'meta_conditions','meta_species','meta_misc',
-                                    'track_threshold','blob_size_ranges','track_max_speed',
-                                    'meta_real_width','settings_file','Notes'])
+                                    'Notes'])
         cat.to_csv(paths['cat'], index=False)
         print('Created experiment log: ' + paths['cat'])
 

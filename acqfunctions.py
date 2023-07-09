@@ -6,19 +6,31 @@ import os
 import pandas as pd
 import numpy as np
 import math 
+import glob
 
-def report_version():
 
-    print("v.6")
+def generate_filename(date, sch_num, trial_num=None):
+    """ Generates a filename for the video based on the date, schedule number, and trial number.
+    Args:
+        date: Date of the experiment in the format YYYYMMDD
+        sch_num: Schedule number
+        trial_num: Trial number (optional)
+    Returns:
+        filename: Filename for the video
+    """
+    if trial_num is None:
+        return date + '_sch' + str(sch_num).zfill(3)
+    else:
+        return date + '_sch' + str(sch_num).zfill(3) + '_tr' + str(trial_num).zfill(3)
 
-def get_cat_info(cat_path, include_mode='both', exclude_mode=None):
+def get_cat_info(cat_path, include_mode='both', exclude_mode='calibration'):
     """ Extracts key parameters from experiment catalog for making videos from image sequence.
     Videos included are the ones where analyze==1 and make_video==1.
 
     Column names must include 'date', 'trial_num', 'analyze', and 'make_video'
     
     cat_path:  Full path to video catalog (CSV file)
-    include_mode: Criteria for what to include. Can be 'analyze', 'make_video', or 'both'
+    include_mode: Criteria for what to include. Can be 'analyze', 'make_video', 'both', 'tgrabs', or 'trex'
     exclude_mode: Criteria for what to exclude. Can be 'calibration' or None
 
     """
@@ -38,6 +50,15 @@ def get_cat_info(cat_path, include_mode='both', exclude_mode=None):
         
     elif include_mode=='make_video':
         d = d.loc[(d.make_video == 1)]
+    
+    elif include_mode=='tgrabs':
+        d = d.loc[(d.run_tgrabs == 1)]
+
+    elif include_mode=='trex':
+        d = d.loc[(d.run_trex == 1)]
+
+    elif include_mode=='matlab':
+        d = d.loc[(d.run_matlab == 1)]
 
     # Determine which rows to exclude
     if exclude_mode == 'calibration':
@@ -364,3 +385,243 @@ def make_calibration_images(path, vid_ext_raw='MOV', vid_ext_mask='mp4', vid_qua
             print('Save to the following path failed: ' + im_path)
         else:
             print('Video frame saved to: ' + im_path)
+
+def add_param_vals(cat_path, param_list_tgrabs, param_list_trex):
+    """ Adds parameter values to the catalog file
+    Args:
+        cat_path (str): Path to catalog file
+        param_list_tgrabs (list): List of tuples with parameter name and value for tgrabs
+        param_list_trex (list): List of tuples with parameter name and value for trex
+    """
+
+    # Read the full cat file
+    cat = pd.read_csv(cat_path)
+
+    # Copy the cat dataframe
+    cat_start = cat.copy()
+
+    # Add the column 'run_tgrabs' if it does not exist
+    if 'run_tgrabs' not in cat.columns:
+        cat['run_tgrabs'] = np.nan
+    
+    # Add the column 'run_trex' if it does not exist
+    if 'run_trex' not in cat.columns:
+        cat['run_trex'] = np.nan
+
+    # Loop through each item in param_list_tgrabs and add a column to cat, if it does not exist
+    for param_val in param_list_tgrabs:
+        if param_val[0] not in cat.columns:
+            cat[param_val[0]] = param_val[1]
+
+    # Loop through each item in param_list_tgrabs and add a column to cat, if it does not exist
+    for param_val in param_list_trex:
+        if param_val[0] not in cat.columns:
+            cat[param_val[0]] = param_val[1]
+
+    # Check if cat_start and cat are the same
+    if cat_start.equals(cat):
+        print('No new parameters added to cat file: ' + cat_path)
+    else:
+        # Save the cat file
+        cat.to_csv(cat_path, index=False)
+        print('Updated default values to cat file: ' + cat_path)
+
+
+def run_tgrabs(cat_path, vid_path_in, vid_path_out,  param_list_tgrabs, vid_ext_proc='mp4', use_settings_file=False, echo=True, run_command=True, settings_path=None):
+    """ Runs TGrabs on all videos listed in the catalog file
+    Args:
+        cat_path (str): Path to catalog file
+        vid_path_in (str): Path to input videos
+        vid_path_out (str): Path to output videos
+        param_list_tgrabs (list): List of tuples with parameter name and value for tgrabs
+        vid_ext_proc (str): Video extension for processed videos
+        use_settings_file (bool): If True, uses the settings file to run TGrabs
+        echo (bool): If True, prints the command to the terminal
+        run_command (bool): If True, runs the command
+        settings_path (str): Path to settings file
+    Returns:
+        commands (list): List of commands
+    """
+    if use_settings_file:
+        # Define input parameter list for TGrabs as dataframe
+        param_input = pd.DataFrame(param_list_tgrabs, columns=['param_name', 'param_val'])
+
+        # Add the TRex parameter listing to the TGrabs parameters (might improve the preliminary tracking)
+        param_input.append(param_list_trex)
+
+    # Extract experiment catalog info
+    cat_curr = get_cat_info(cat_path, include_mode='tgrabs', exclude_mode='calibration')
+    if len(cat_curr) == 0:
+        raise ValueError('No tgrabs to work on from experiment_log.' + \
+                         ' The column \'run_tgrabs\' must be' + \
+                         ' set to 1 to run tgrabs.')
+
+    # Make list of .mp4 files in local_path + os.sep + 'binary'
+    binary_list = glob.glob(vid_path_in + os.sep + '*.mp4')
+
+    commands = []
+
+    # Loop thru each video listed in cat
+    for c_row in cat_curr.index:
+
+        # Get date, trial, and schedule numbers
+        date_curr   = cat_curr.date[c_row]
+        trial_curr  = cat_curr.trial_num[c_row]
+        sch_curr    = cat_curr.sch_num[c_row]
+
+        # Generic filename for the trial
+        filename = generate_filename(date_curr, sch_curr, trial_num=trial_curr)
+
+        # Define and check input path
+        path_in = vid_path_in + os.sep + filename + '.' + vid_ext_proc
+
+        # Report if there is no binary file
+        if not os.path.exists(path_in):
+            print(' ')
+            print('No binary file for this trial, cannot generate pv file: ' + filename)
+
+        # Otherwise, proceed with tGrabs . . .
+        else:
+
+            # Output path
+            path_out = vid_path_out + os.sep + filename + '.pv'
+
+            # Start formulating the TGrabs command
+            command = f'tgrabs -i {path_in} -o {path_out} '
+
+            # Get max number of fish from cat_curr
+            command += f'-track_max_individuals {str(int(cat_curr.fish_num[c_row]))} '
+
+            # loop thru each entry in param_list_tgrabs, and add the value for that parameter in the column of cat_curr
+            # that has the same name as the parameter (nans excluded)
+            for param in param_list_tgrabs:
+                value = cat_curr[param[0]][c_row]
+                if pd.notna(value) and value != 'nan' and value != 'null':
+                    command += f'-{param[0]} {value} '
+
+            if use_settings_file:
+                # Write settings to csv
+                param_input.to_csv(path_settings, index=False)
+
+                # Path to save settings table
+                path_settings = settings_path + os.sep + filename + '_tgrabs_settings.csv'
+
+            if run_command:
+                # Execute at th e command line
+                os.system(command)
+
+                if echo:
+                    print(' ')
+                    print('Running TGrabs with the following command:')
+                    print(command)
+            else:
+                if echo:
+                    print(' ')
+                    print('TGrabs command (not run):')
+                    print(command)
+
+            # Append command to list
+            commands.append(command)
+
+    return commands
+
+def run_trex(cat_path, vid_path, data_path, param_list_trex, cat_to_trex, use_settings_file=False, echo=True, run_command=True, settings_path=None):
+    """ Runs TRex on all videos listed in the catalog file
+    Args:
+        cat_path (str): Path to catalog file
+        vid_path (str): Path to videos
+        data_path (str): Path to data
+        param_list_trex (list): List of tuples with parameter name and value for trex
+        cat_to_trex (list): List of tuples with catalog column name and trex parameter name
+        use_settings_file (bool): If True, uses the settings file to run TRex
+        echo (bool): If True, prints the command to the terminal
+        run_command (bool): If True, runs the command
+        settings_path (str): Path to settings file
+    Returns:
+        commands (list): List of commands
+    """
+
+    if use_settings_file:
+        # Define input parameter list for TGrabs as dataframe
+        param_input = pd.DataFrame(param_list_trex, columns=['param_name', 'param_val'])
+
+        # Add the TRex parameter listing to the TGrabs parameters (might improve the preliminary tracking)
+        param_input.append(param_list_trex)
+
+    # Extract experiment catalog info
+    cat_curr = get_cat_info(cat_path, include_mode='trex', exclude_mode='calibration')
+    if len(cat_curr) == 0:
+        raise ValueError('No tRex to work on from experiment_log.' + \
+                         ' The column \'run_trex\' must be' + \
+                         ' set to 1 to run tRex.')
+
+    # Make list of .mp4 files in local_path + os.sep + 'binary'
+    pv_list = glob.glob(vid_path + os.sep + '*.pv')
+
+    commands = []
+
+    # Loop thru each video listed in cat
+    for c_row in cat_curr.index:
+
+        # Get date, trial, and schedule numbers
+        date_curr   = cat_curr.date[c_row]
+        trial_curr  = cat_curr.trial_num[c_row]
+        sch_curr    = cat_curr.sch_num[c_row]
+
+        # Generic filename for the trial
+        filename = generate_filename(date_curr, sch_curr, trial_num=trial_curr)
+
+        # Define and check input path
+        path_in = vid_path + os.sep + filename + '.pv'
+        print(path_in)
+        # Report if there is no binary file
+        if not os.path.exists(path_in):
+            print(' ')
+            print('No pv file for this trial, cannot generate tracking data: ' + filename)
+
+        # Otherwise, proceed with tGrabs . . .
+        else:
+
+            # Start formulating the TRex command
+            command = f'trex -i {path_in} -output_dir {data_path} '
+
+            # Loop trhu cat_to_trexand add the value in cat to the command
+            for param in cat_to_trex:
+                value = cat_curr[param[0]][c_row]
+                if pd.notna(value) and value != 'nan' and value != 'null':
+                    command += f'-{param[1]} {value} '
+                else:
+                    raise ValueError('The column ' + param[0] + ' must be defined in experiment_log for each trial.')
+
+            # loop thru each entry in param_list_tgrabs, and add the value for that parameter in the column of cat_curr
+            # that has the same name as the parameter (nans excluded)
+            for param in param_list_trex:
+                value = cat_curr[param[0]][c_row]
+                if pd.notna(value) and value != 'nan' and value != 'null':
+                    command += f'-{param[0]} {value} '
+
+            if use_settings_file:
+                # Write settings to csv
+                param_input.to_csv(path_settings, index=False)
+
+                # Settings path
+                path_settings = settings_path + os.sep + filename + '.settings'
+
+            if run_command:
+                # Execute at th e command line
+                os.system(command)
+
+                if echo:
+                    print(' ')
+                    print('Running TRex with the following command:')
+                    print(command)
+            else:
+                if echo:
+                    print(' ')
+                    print('TRex command (not run):')
+                    print(command)
+
+            # Append command to list
+            commands.append(command)
+
+    return commands
