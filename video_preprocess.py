@@ -116,6 +116,10 @@ def add_start_timecodes(vid_files, vid_path, cat):
         if not match_row.empty:
             video_path = os.path.join(vid_path, file)
             cap = cv2.VideoCapture(video_path)
+
+            # Get framerate of cap, update cat
+            fps = cap.get(cv2.CAP_PROP_FPS)
+            cat.loc[match_row.index, 'frame_rate'] = fps
             
             # Use ffprobe to get the video duration
             ffprobe_cmd = f"ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 '{video_path}'"

@@ -427,7 +427,8 @@ def add_param_vals(cat_path, param_list_tgrabs, param_list_trex):
         print('Updated default values to cat file: ' + cat_path)
 
 
-def run_tgrabs(cat_path, vid_path_in, vid_path_out,  param_list_tgrabs, vid_ext_proc='mp4', use_settings_file=False, echo=True, run_command=True, settings_path=None):
+def run_tgrabs(cat_path, vid_path_in, vid_path_out,  param_list_tgrabs, vid_ext_proc='mp4', use_settings_file=False,
+               run_gui=True, echo=True, run_command=True, settings_path=None):
     """ Runs TGrabs on all videos listed in the catalog file
     Args:
         cat_path (str): Path to catalog file
@@ -436,6 +437,7 @@ def run_tgrabs(cat_path, vid_path_in, vid_path_out,  param_list_tgrabs, vid_ext_
         param_list_tgrabs (list): List of tuples with parameter name and value for tgrabs
         vid_ext_proc (str): Video extension for processed videos
         use_settings_file (bool): If True, uses the settings file to run TGrabs
+        run_gui (bool): If True, runs the TGrabs GUI
         echo (bool): If True, prints the command to the terminal
         run_command (bool): If True, runs the command
         settings_path (str): Path to settings file
@@ -489,6 +491,12 @@ def run_tgrabs(cat_path, vid_path_in, vid_path_out,  param_list_tgrabs, vid_ext_
             # Start formulating the TGrabs command
             command = f'tgrabs -i {path_in} -o {path_out} '
 
+            # Whether to launch gui
+            if run_gui:
+                command += '-nowindow false '
+            else:
+                command += '-nowindow true '
+
             # Get max number of fish from cat_curr
             command += f'-track_max_individuals {str(int(cat_curr.fish_num[c_row]))} '
 
@@ -525,7 +533,8 @@ def run_tgrabs(cat_path, vid_path_in, vid_path_out,  param_list_tgrabs, vid_ext_
 
     return commands
 
-def run_trex(cat_path, vid_path, data_path, param_list_trex, cat_to_trex, use_settings_file=False, echo=True, run_command=True, settings_path=None):
+def run_trex(cat_path, vid_path, data_path, param_list_trex, cat_to_trex, use_settings_file=False, echo=True,
+             run_gui=True, run_command=True, settings_path=None):
     """ Runs TRex on all videos listed in the catalog file
     Args:
         cat_path (str): Path to catalog file
@@ -535,6 +544,7 @@ def run_trex(cat_path, vid_path, data_path, param_list_trex, cat_to_trex, use_se
         cat_to_trex (list): List of tuples with catalog column name and trex parameter name
         use_settings_file (bool): If True, uses the settings file to run TRex
         echo (bool): If True, prints the command to the terminal
+        run_gui (bool): If True, runs the TRex GUI
         run_command (bool): If True, runs the command
         settings_path (str): Path to settings file
     Returns:
@@ -584,6 +594,16 @@ def run_trex(cat_path, vid_path, data_path, param_list_trex, cat_to_trex, use_se
 
             # Start formulating the TRex command
             command = f'trex -i {path_in} -output_dir {data_path} '
+
+            # Whether to launch gui
+            if run_gui:
+                command += '-nowindow false '
+                command += '-auto_quit false '
+            else:
+                command += '-nowindow true '
+                command += '-auto_quit true '
+
+            command += '-fishdata_dir \'fishdata\' '
 
             # Loop trhu cat_to_trexand add the value in cat to the command
             for param in cat_to_trex:

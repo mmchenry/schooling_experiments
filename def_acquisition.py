@@ -151,17 +151,10 @@ def raw_to_mat(cat, path):
     for expt_c in cat.index:
 
         # Define trial and schedule strings
-        trialnum = str(int(cat.trial_num[expt_c])).zfill(3)
-        schnum = str(int(cat.sch_num[expt_c])).zfill(3)
-
-        schnum = str(int(cat.sch_num[expt_c]))
-        schnum = '00' + schnum[-3:]
-
-        datetrial_name = cat.date[expt_c] + '_sch' + schnum + '_tr' + trialnum
-    
+        datetrial_name = generate_filename(cat.date[expt_c], cat.sch_num[expt_c], trial_num=cat.trial_num[expt_c])
 
         # Paths for raw data files for current experiment
-        path_c = path['data_raw'] + os.sep + 'data' + os.sep + datetrial_name + '*' + 'npz'
+        path_c = path['data_raw'] + os.sep + 'fishdata' + os.sep + datetrial_name + '*' + 'npz'
 
         # Get all npz filenames for current experiment
         raw_files = glob.glob(path_c)
@@ -178,10 +171,12 @@ def raw_to_mat(cat, path):
                 # Load contents of npz file
                 b = np.load(raw_c)
 
-                # Transfer all data to a dictionary
+                # Transfer all data to a dictionary (remove #s)
                 dict_c = {}
-                for field_c in b.files:
-                    dict_c[field_c] = b[field_c]
+                for field_b in b.files:
+                    field_c = field_b
+                    field_c = field_c.replace('#', '_')
+                    dict_c[field_c] = b[field_b]
 
                 # Path for current mat file
                 out_path = path['data_mat'] + os.sep + os.path.basename(raw_c)[:-4] + '.mat'
@@ -191,3 +186,11 @@ def raw_to_mat(cat, path):
 
                 # Report conversion
                 print('Data export: ' + out_path)
+
+
+# Function that generates a filename
+def generate_filename(date, sch_num, trial_num=None):
+    if trial_num is None:
+        return date + '_sch' + str(sch_num).zfill(3)
+    else:
+        return date + '_sch' + str(sch_num).zfill(3) + '_tr' + str(trial_num).zfill(3)
