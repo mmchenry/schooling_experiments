@@ -496,7 +496,8 @@ def fill_and_smooth(image, num_iterations=3, kernel_size=3):
 
 
 def make_binary_movie(vid_path_in, vid_path_out, mean_image, threshold, min_area, max_area, 
-                      im_mask=None, mask_perim=None, im_crop=True, status_txt=None, thresh_tol=0.05, echo=False):
+                      im_mask=None, mask_perim=None, im_crop=True, status_txt=None, thresh_tol=0.05, echo=False,
+                      blob_color='graycale'):
     """Make a binary movie from a video.
     Args:
         vid_path_in (str): Path to input video.
@@ -509,6 +510,8 @@ def make_binary_movie(vid_path_in, vid_path_out, mean_image, threshold, min_area
         mask_perim (int): Mask perimeter.
         im_crop (bool): If True, crop the image.
         thresh_tol (float): Threshold tolerance. Determines what proportion of blob area to trigger change in threshold.
+        echo (bool): If True, print status updates.
+        blob_color (str): Color of blobs in output video. Options are 'grayscale' and 'white'.
     Returns:
         None
     """
@@ -571,6 +574,10 @@ def make_binary_movie(vid_path_in, vid_path_out, mean_image, threshold, min_area
             # Calculate the total area of the blobs
             total_area = np.sum(im_thresh2 > 0)
 
+            if blob_color == 'grayscale':
+                # Image where all grayscale pixels from im are passed where im_thresh2==255
+                im_filtered = cv2.bitwise_and(im, im, mask=im_thresh2)
+
             # Quit loop if the area has not changed much
             if (total_area/total_area0) < (1+thresh_tol) and \
                 (total_area/total_area0) > (1-thresh_tol):
@@ -595,7 +602,12 @@ def make_binary_movie(vid_path_in, vid_path_out, mean_image, threshold, min_area
                     print('   ' + status_txt + ' Frame {} : Decreasing threshold to {}'.format(frame_num+1, threshold))
 
         # Write the frame to the output video
-        vid_out.write(im_thresh2)
+        if blob_color == 'white':
+            vid_out.write(im_thresh2)
+        elif blob_color == 'grayscale':
+            vid_out.write(im_filtered)
+        else:
+            raise ValueError("blob_color must be 'white' or 'grayscale'.")
 
         # Print progress, every 100 frames
         if frame_num % 100 == 0:
@@ -612,3 +624,9 @@ def make_binary_movie(vid_path_in, vid_path_out, mean_image, threshold, min_area
     vid_in.release()
     vid_out.release()
 
+def display_image(im):
+    # Display the binary image
+    gf.create_cv_window('Image')
+    cv2.imshow('Image', im)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
