@@ -47,7 +47,7 @@ def check_video_duration(vid_dir, sch, cat, vid_ext='MOV', thresh_time=3.0):
     Returns:
         vid_files (list): List of filenames in current schedule.
     """
-  
+
     # Get filenames of video files without extensions
     vid_files = get_matching_video_filenames(cat, vid_dir, vid_ext=vid_ext)
 
@@ -68,7 +68,7 @@ def check_video_duration(vid_dir, sch, cat, vid_ext='MOV', thresh_time=3.0):
 
         # Calculate the duration of the recording
         if sch_row['ramp2_dur_sec'].values.size == 0:
-            sch_duration = 60*sch_row['start_dur_min'].values[0] + sch_row['ramp_dur_sec'].values[0] + 60*sch_row['end_dur_min'].values[0] 
+            sch_duration = 60*sch_row['start_dur_min'].values[0] + sch_row['ramp_dur_sec'].values[0] + 60*sch_row['end_dur_min'].values[0]
         else:
             sch_duration = 60*sch_row['start_dur_min'].values[0] + sch_row['ramp_dur_sec'].values[0] + 60*sch_row['end_dur_min'].values[0] + sch_row['ramp2_dur_sec'].values[0] + 60*sch_row['return_dur_min'].values[0]
 
@@ -82,7 +82,7 @@ def check_video_duration(vid_dir, sch, cat, vid_ext='MOV', thresh_time=3.0):
         elif (sch_duration - vid_duration)>thresh_time:
             print("Video duration is LESS THAN the duration in experiment_log by more than " + "{:.1f}".format(thresh_time) + " s: " + file)
             print('   Video duration: ' + "{:.1f}".format(vid_duration))
-            print('   sch duration: ' + "{:.1f}".format(sch_duration))  
+            print('   sch duration: ' + "{:.1f}".format(sch_duration))
 
     return vid_files
 
@@ -109,10 +109,10 @@ def get_matching_video_filenames(cat, directory, vid_ext='MOV'):
 def add_start_timecodes(vid_files, vid_path, cat):
     for file in vid_files:
         filename = os.path.splitext(file)[0]  # Extract filename without extension
-        
+
         # Find matching row in cat DataFrame based on video_filename
         match_row = cat[cat['video_filename'] == filename]
-        
+
         if not match_row.empty:
             video_path = os.path.join(vid_path, file)
             cap = cv2.VideoCapture(video_path)
@@ -120,24 +120,12 @@ def add_start_timecodes(vid_files, vid_path, cat):
             # Get framerate of cap, update cat
             fps = cap.get(cv2.CAP_PROP_FPS)
             cat.loc[match_row.index, 'frame_rate'] = fps
-            
-            # Use ffprobe to get the video duration
-            ffprobe_cmd = f"ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 '{video_path}'"
-            result = subprocess.run(ffprobe_cmd, shell=True, capture_output=True, text=True)
-            
-            if result.returncode == 0:
-                duration = float(result.stdout)
-                # fps = match_row['fps'].iloc[0]  # Extract the frame rate from the DataFrame
-                fps = cap.get(cv2.CAP_PROP_FPS)
-                start_time = "00:00:00:00"  # Default start timecode
-                
-                if fps > 0:
-                    frames = int(fps * duration)
-                    start_time = f"{frames // 3600:02d}:{frames // 60 % 60:02d}:{frames % 60:02d}:00"
-                
-                # Update timecode_start in matching row of cat DataFrame
-                cat.loc[match_row.index, 'timecode_start'] = start_time
-    
+
+            # If there is no value at cat.loc[match_row.index, 'timecode_start'], then calculate it
+            if pd.isnull(cat.loc[match_row.index, 'timecode_start']).values[0]:
+                # Default empty timecode
+                cat.loc[match_row.index, 'timecode_start'] = "00:00:00:00"
+
     return cat
 
 
@@ -201,11 +189,11 @@ def read_frame(cap, idx, im_mask=None, mask_perim=None, im_crop=False, outside_c
     if im_mask is not None:
         if mask_perim is None:
             raise ValueError("mask_perim must be defined if im_mask is given.")
-        
+
     if im_crop is True:
         if im_mask is None:
             raise ValueError("im_mask must be defined if im_crop is True.")
-        
+
     # Read frame at index idx
     cap.set(cv2.CAP_PROP_POS_FRAMES, idx)
     _, frame = cap.read()
@@ -218,7 +206,7 @@ def read_frame(cap, idx, im_mask=None, mask_perim=None, im_crop=False, outside_c
 
     if frame is  None:
         print(f"Invalid frame at index {idx}")
-    
+
     # Mask frame, if mask image given
     if im_mask is not None:
 
@@ -288,7 +276,7 @@ def make_max_mean_image(cat_curr, sch, vid_path, max_num_frames, im_mask=None, m
         returns:
             mean_image: Mean image"""
 
-    # Find the maximum value among light_start, light_end, and light_return, and light_btwn in sch 
+    # Find the maximum value among light_start, light_end, and light_return, and light_btwn in sch
     max_light = max(sch['light_start'].max(), sch['light_end'].max(), sch['light_return'].max())
 
     # Find values of light_start that equal max_light
@@ -339,12 +327,12 @@ def make_max_mean_image(cat_curr, sch, vid_path, max_num_frames, im_mask=None, m
         fps = vid.get(cv2.CAP_PROP_FPS)
 
         # Get the start and end times for the current video that are not nan values
-        start_start  = df.loc[idx, 'start_starttime'] 
+        start_start  = df.loc[idx, 'start_starttime']
         start_end    = df.loc[idx, 'start_endtime']
         end_start    = df.loc[idx, 'end_starttime']
         end_end      = df.loc[idx, 'end_endtime']
-        return_start = df.loc[idx, 'return_starttime'] 
-        return_end   = df.loc[idx, 'return_endtime'] 
+        return_start = df.loc[idx, 'return_starttime']
+        return_end   = df.loc[idx, 'return_endtime']
 
         # Collect frame numbers for snippets at max light intensity, for current video
         frame_nums = np.array([])
@@ -362,7 +350,7 @@ def make_max_mean_image(cat_curr, sch, vid_path, max_num_frames, im_mask=None, m
 
         # Loop through the frame_nums array
         for frame_num in frame_nums:
-            
+
             # Import the current frame
             frame = read_frame(vid, frame_num, im_mask, mask_perim, im_crop=im_crop)
 
@@ -401,7 +389,7 @@ def threshold_diff_image(im, im_mean, threshold):
     # Compute absolute difference between im and im_mean
     im_diff = cv2.absdiff(im, im_mean)
 
-    # Apply a threshold 
+    # Apply a threshold
     _, im_thresh = cv2.threshold(im_diff, threshold, 255, cv2.THRESH_BINARY)
 
     return im_thresh
@@ -488,14 +476,14 @@ def fill_and_smooth(image, num_iterations=3, kernel_size=3):
     for _ in range(num_iterations):
         dilated = cv2.dilate(smoothed, kernel, iterations=1)
         smoothed = cv2.erode(dilated, kernel, iterations=1)
-    
+
     # Dilate the smoothed image one more time
     dilated = cv2.dilate(smoothed, kernel, iterations=1)
 
     return smoothed
 
 
-def make_binary_movie(vid_path_in, vid_path_out, mean_image, threshold, min_area, max_area, 
+def make_binary_movie(vid_path_in, vid_path_out, mean_image, threshold, min_area, max_area,
                       im_mask=None, mask_perim=None, im_crop=True, status_txt=None, thresh_tol=0.05, echo=False,
                       blob_color='graycale'):
     """Make a binary movie from a video.
@@ -520,7 +508,7 @@ def make_binary_movie(vid_path_in, vid_path_out, mean_image, threshold, min_area
     if im_mask is not None:
         if mask_perim is None:
             raise ValueError("mask_perim must be defined if im_mask is given.")
-        
+
     if im_crop is True:
         if im_mask is None:
             raise ValueError("im_mask must be defined if im_crop is True.")
@@ -534,7 +522,7 @@ def make_binary_movie(vid_path_in, vid_path_out, mean_image, threshold, min_area
 
     # Read the first frame, find initial total area of blobs
     im = read_frame(vid_in, 0, im_mask=im_mask, mask_perim=mask_perim, im_crop=True, outside_clr='white', color_mode='grayscale')
-    im_thresh = filter_blobs(im, mean_image, threshold, min_area, max_area, white_blobs=True)  
+    im_thresh = filter_blobs(im, mean_image, threshold, min_area, max_area, white_blobs=True)
     im_thresh2 = fill_and_smooth(im_thresh)
     total_area0 = np.sum(im_thresh2 > 0)
 
@@ -542,7 +530,7 @@ def make_binary_movie(vid_path_in, vid_path_out, mean_image, threshold, min_area
     vid_out = cv2.VideoWriter(vid_path_out, fourcc, int(vid_in.get(cv2.CAP_PROP_FPS)), (im.shape[1], im.shape[0]), isColor=False)
 
     # Start time for calculating elapsed time
-    start_time = time.time()  
+    start_time = time.time()
 
     # Smaller number of frames for testing
     # num_frames = 100
@@ -566,7 +554,7 @@ def make_binary_movie(vid_path_in, vid_path_out, mean_image, threshold, min_area
         while adjusting_threshold:
 
             # Apply the filter_blobs function to the current frame
-            im_thresh = filter_blobs(im, mean_image, threshold, min_area, max_area, white_blobs=True)  
+            im_thresh = filter_blobs(im, mean_image, threshold, min_area, max_area, white_blobs=True)
 
             # Fill and smooth the blobs in im_thresh
             im_thresh2 = fill_and_smooth(im_thresh)
@@ -619,7 +607,7 @@ def make_binary_movie(vid_path_in, vid_path_out, mean_image, threshold, min_area
 
             print('   ' + status_txt + ': Finished frame {} of {}. Estimated time remaining: {:.1f} min'.format(
                 frame_num+1, num_frames, time_remaining))
-    
+
     # close video
     vid_in.release()
     vid_out.release()
