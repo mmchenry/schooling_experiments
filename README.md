@@ -35,6 +35,7 @@ The code assumes the following directory structure. This will be self-generated 
             * "experiment_log.csv" - *Experiment catalog, downloaded from google sheets.*
             * "data" 
                 * "raw" - *Directory holding the data generated from the videos by TRex.*
+                  * "fishdata" - *Directory holding the data generated from the videos by TRex.*
                 * "settings" - *Directory holding the settings files used by TRex.*
                 * "matlab" - *mat files of the TRex data, analyzed in Matlab.*
             * experiment_schedules - *csv files generated to control the camera and lights on a schedule.*
@@ -56,9 +57,7 @@ Includes the following files:
 
 - **[acquire_kinematics.ipynb](acquire_kinematics.ipynb)**: Jupyter notebook that explains how to run the acquisition and includes the necessary code.
 
-- **[run_acquisition.py](run_acquisition.py)**: This is a coders version for developing the acquisition code. Includes some dead-ends not included in acquire_kinematics.ipynb .
-
-- **[def_definepaths.py](def_definepaths.py)**: Defines the data and video paths for the project. You need to add root paths for each new user or machine included in the project (and push the addition).
+- **[def_paths.py](def_definepaths.py)**: Defines the data and video paths for the project. You need to add root paths for each new user or machine included in the project (and push the addition).
 
 - **[def_acquisition.py](def_acquisition.py)**: Functions for running data acquisition.
 

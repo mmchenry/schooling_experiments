@@ -33,7 +33,7 @@ def give_paths(root_path, proj_name):
         else:
             # Exit the function
             return None
-    
+
     elif (os.path.exists(data_path)) and (not os.path.exists(vid_path)):
         ans = show_confirmation_dialog('Project found in data, but not in video. Create a new project in video?')
 
@@ -43,7 +43,7 @@ def give_paths(root_path, proj_name):
         else:
             # Exit the function
             return None
-    
+
     # Directory structure wrt root folders
     paths = {
         # Path to data
@@ -55,11 +55,14 @@ def give_paths(root_path, proj_name):
         # Path to experiment catalog file
         'data_raw': data_path + os.sep + 'raw',
 
-        # Path to experiment catalog file
+        # Path to matlab files from TRex _results files
         'data_mat': data_path + os.sep + 'matlab',
 
-        # Path to experiment catalog file
-        'data_mat_vid': data_path + os.sep + 'matlab'+ os.sep + 'video',
+        # Path to matlab centroid data
+        'data_mat_centroid': data_path + os.sep + 'matlab' + os.sep + 'centroid',
+
+        # Path to matlab midline data
+        'data_mat_posture': data_path + os.sep + 'matlab' + os.sep + 'posture',
 
         # Path to settings file
         'settings': data_path + os.sep + 'settings',
@@ -91,7 +94,7 @@ def give_paths(root_path, proj_name):
         # Schedules
         'sch': data_path + os.sep + 'experiment_schedules'
         }
-    
+
     # Create loop that makes a directory for each path in paths
     for path in paths.values():
         if not os.path.exists(path):
@@ -100,7 +103,7 @@ def give_paths(root_path, proj_name):
 
      # Path to experiment catalog file
     paths['cat']= data_path + os.sep + 'experiment_log.csv'
-    
+
     # Create a recording log file if it does not exist
     log_path = data_path + os.sep + 'recording_log.csv'
     if not os.path.isfile(log_path):
@@ -133,7 +136,7 @@ def get_screen_resolution():
     Returns:
         width (int): Screen width.
         height (int): Screen height."""
-    
+
     screen_info = screeninfo.get_monitors()
     width = screen_info[0].width
     height = screen_info[0].height

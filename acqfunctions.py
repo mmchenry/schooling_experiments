@@ -19,9 +19,9 @@ def generate_filename(date, sch_num, trial_num=None):
         filename: Filename for the video
     """
     if trial_num is None:
-        return date + '_sch' + str(sch_num).zfill(3)
+        return date + '_sch' + str(int(sch_num)).zfill(3)
     else:
-        return date + '_sch' + str(sch_num).zfill(3) + '_tr' + str(trial_num).zfill(3)
+        return date + '_sch' + str(int(sch_num)).zfill(3) + '_tr' + str(int(trial_num)).zfill(3)
 
 def get_cat_info(cat_path, include_mode='both', exclude_mode='calibration'):
     """ Extracts key parameters from experiment catalog for making videos from image sequence.
@@ -411,12 +411,12 @@ def add_param_vals(cat_path, param_list_tgrabs, param_list_trex):
     # Loop through each item in param_list_tgrabs and add a column to cat, if it does not exist
     for param_val in param_list_tgrabs:
         if param_val[0] not in cat.columns:
-            cat[param_val[0]] = param_val[1]
+            cat[param_val[0]] = str(param_val[1])
 
     # Loop through each item in param_list_tgrabs and add a column to cat, if it does not exist
     for param_val in param_list_trex:
         if param_val[0] not in cat.columns:
-            cat[param_val[0]] = param_val[1]
+            cat[param_val[0]] = str(param_val[1])
 
     # Check if cat_start and cat are the same
     if cat_start.equals(cat):
@@ -533,8 +533,8 @@ def run_tgrabs(cat_path, vid_path_in, vid_path_out,  param_list_tgrabs, vid_ext_
 
     return commands
 
-def run_trex(cat_path, vid_path, data_path, param_list_trex, cat_to_trex, use_settings_file=False, echo=True,
-             run_gui=True, run_command=True, settings_path=None):
+def run_trex(cat_path, vid_path, data_path, param_list_trex, cat_to_trex, use_settings_file=False, output_posture=True,
+             echo=True, run_gui=True, run_command=True, settings_path=None):
     """ Runs TRex on all videos listed in the catalog file
     Args:
         cat_path (str): Path to catalog file
@@ -603,7 +603,16 @@ def run_trex(cat_path, vid_path, data_path, param_list_trex, cat_to_trex, use_se
                 command += '-nowindow true '
                 command += '-auto_quit true '
 
-            command += '-fishdata_dir \'fishdata\' '
+            if output_posture:
+                command += '-output_posture_data true '
+                command += '-gui_happy_mode true '
+            else:
+                command += '-output_posture_data false '
+                command += '-gui_happy_mode false '
+
+            # Add additional default parameters
+            command += '-fishdata_dir \'trex_fishdata\' '
+            command += '-output_invalid_value nan '
 
             # Loop trhu cat_to_trexand add the value in cat to the command
             for param in cat_to_trex:
@@ -616,7 +625,7 @@ def run_trex(cat_path, vid_path, data_path, param_list_trex, cat_to_trex, use_se
             # loop thru each entry in param_list_tgrabs, and add the value for that parameter in the column of cat_curr
             # that has the same name as the parameter (nans excluded)
             for param in param_list_trex:
-                value = cat_curr[param[0]][c_row]
+                value = str(cat_curr[param[0]][c_row])
                 if pd.notna(value) and value != 'nan' and value != 'null':
                     command += f'-{param[0]} {value} '
 
@@ -645,3 +654,14 @@ def run_trex(cat_path, vid_path, data_path, param_list_trex, cat_to_trex, use_se
             commands.append(command)
 
     return commands
+
+def delete_matching_files(local_path, pv_path):
+    mp4_files = [os.path.splitext(file)[0] for file in os.listdir(local_path) if file.endswith(".mp4")]
+    pv_files = [os.path.splitext(file)[0] for file in os.listdir(pv_path) if file.endswith(".pv")]
+
+    matching_files = set(mp4_files).intersection(pv_files)
+
+    for file in matching_files:
+        mp4_file_path = os.path.join(local_path, file + ".mp4")
+        os.remove(mp4_file_path)
+        print(f"Deleted: {mp4_file_path}")
