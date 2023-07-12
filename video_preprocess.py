@@ -485,7 +485,7 @@ def fill_and_smooth(image, num_iterations=3, kernel_size=3):
 
 def make_binary_movie(vid_path_in, vid_path_out, mean_image, threshold, min_area, max_area,
                       im_mask=None, mask_perim=None, im_crop=True, status_txt=None, thresh_tol=0.05, echo=False,
-                      blob_color='graycale'):
+                      blob_color='grayscale'):
     """Make a binary movie from a video.
     Args:
         vid_path_in (str): Path to input video.
