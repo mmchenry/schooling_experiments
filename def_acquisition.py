@@ -153,8 +153,8 @@ def raw_to_mat(cat, path):
         # Define trial and schedule strings
         datetrial_name = generate_filename(cat.date[expt_c], cat.sch_num[expt_c], trial_num=cat.trial_num[expt_c])
 
-        # Paths for raw data files for current experiment
-        path_c = path['data_raw'] + os.sep + 'fishdata' + os.sep + datetrial_name + '*' + 'npz'
+        # Paths for fishdata files for current experiment
+        path_c = path['data_raw'] + os.sep + 'trex_fishdata' + os.sep + datetrial_name + '*' + 'npz'
 
         # Get all npz filenames for current experiment
         raw_files = glob.glob(path_c)
@@ -179,7 +179,10 @@ def raw_to_mat(cat, path):
                     dict_c[field_c] = b[field_b]
 
                 # Path for current mat file
-                out_path = path['data_mat'] + os.sep + os.path.basename(raw_c)[:-4] + '.mat'
+                if len(os.path.basename(raw_c))<=35:
+                    out_path = path['data_mat_centroid'] + os.sep + os.path.basename(raw_c)[:-4] + '.mat'
+                else:
+                    out_path = path['data_mat_posture'] + os.sep + os.path.basename(raw_c)[:-4] + '.mat'
 
                 # Save dictionary data to a mat file
                 savemat(out_path, dict_c)
@@ -189,8 +192,9 @@ def raw_to_mat(cat, path):
 
 
 # Function that generates a filename
+# Function that generates a filename
 def generate_filename(date, sch_num, trial_num=None):
     if trial_num is None:
-        return date + '_sch' + str(sch_num).zfill(3)
+        return date + '_sch' + str(int(sch_num)).zfill(3)
     else:
-        return date + '_sch' + str(sch_num).zfill(3) + '_tr' + str(trial_num).zfill(3)
+        return date + '_sch' + str(int(sch_num)).zfill(3) + '_tr' + str(int(trial_num)).zfill(3)

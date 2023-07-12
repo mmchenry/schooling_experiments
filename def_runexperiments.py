@@ -480,9 +480,9 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
 
         # Data to add to log
         log_data = {
-            'date': [curr_date.strftime("%Y-%m-%d")],   
-            'sch_num': [sch_num], 
-            'trial_num' : [trial_num],
+            'date': [curr_date.strftime("%Y-%m-%d")],
+            'sch_num': [int(sch_num)],
+            'trial_num' : [int(trial_num)],
             'start_time': [starttime_str],
             'video_filename': [vid_filename]
         }
