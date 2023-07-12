@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 from scipy.interpolate import splprep, splev
 import math
+from shapely.geometry import Polygon
 
 
 # The following is used to generate GUIs
@@ -342,6 +343,13 @@ def create_mask_for_batch(vid_file, mask_file):
         print('No points selected. Exiting function.')
         return
 
+    # get centroid of points polygon
+    point_polygon = Polygon(points)
+    polygon_centroid = point_polygon.centroid
+    centroid_x = polygon_centroid.x
+    centroid_y = polygon_centroid.y
+    centroid = [int(centroid_x),int(centroid_y)]
+
     # Generate the binary image from roi
     binary_image = generate_binary_image(im_start, points)
 
@@ -356,6 +364,8 @@ def create_mask_for_batch(vid_file, mask_file):
 
     print(' ')
     print('Mask saved to: ' + mask_file)
+
+    return centroid
 
 
 def run_spatial_calibration(vid_file, reps=3, font_size=40):
