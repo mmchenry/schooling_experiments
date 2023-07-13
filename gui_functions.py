@@ -548,7 +548,7 @@ def interactive_threshold(im, im_mean):
             break
 
     # Retrieve the final threshold value
-    threshold = cv2.getTrackbarPos('Threshold', win_name)
+    threshold = int(cv2.getTrackbarPos('Threshold', win_name))
 
     cv2.destroyAllWindows()
     return threshold, im_thresholded

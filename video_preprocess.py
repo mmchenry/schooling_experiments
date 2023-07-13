@@ -202,7 +202,7 @@ def read_frame(cap, idx, im_mask=None, mask_perim=None, im_crop=False, outside_c
         raise ValueError(f"Invalid frame at index {idx}")
 
     if color_mode=='grayscale':
-        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+        frame =     cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
 
     if frame is  None:
         print(f"Invalid frame at index {idx}")
@@ -409,6 +409,10 @@ def filter_blobs(im, im_mean, threshold, min_area, max_area, max_aspect_ratio=0.
         filtered_im (np.array): Filtered image.
     """
 
+    # Check that dimensions of the image are the same
+    if im.shape != im_mean.shape:
+        raise ValueError('Dimensions of im and im_mean are not the same.')
+
     # Convert image to binary
     im_thresh = threshold_diff_image(im, im_mean, threshold)
 
@@ -512,6 +516,9 @@ def make_binary_movie(vid_path_in, vid_path_out, mean_image, threshold, min_area
     if im_crop is True:
         if im_mask is None:
             raise ValueError("im_mask must be defined if im_crop is True.")
+
+    # Make sure the threshold is an integer
+    threshold = int(threshold)
 
     # Define the codec to use for video encoding
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Specify the video codec (e.g., 'mp4v' for MP4)
