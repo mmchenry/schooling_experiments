@@ -540,17 +540,23 @@ def make_binary_movie(vid_path_in, vid_path_out, mean_image, threshold, min_area
     start_time = time.time()
 
     # Smaller number of frames for testing
-    # num_frames = 100
+    #num_frames = 200
+
+    # define list of tested thresholds
+    # threshold_prev = []
 
     # Create loop thru all frames
     for frame_num in range(num_frames):
+    #for frame_num in range(188, num_frames):
     # for frame_num in range(30):
 
         # This mode dictates whether the threshold is being adjusted
         adjusting_threshold = True
 
+        # define list of tested thresholds
+        threshold_prev = []
         # Previous value for threshold
-        threshold_prev = threshold
+        #threshold_prev.append(threshold)
 
         # Number of threshold adjustments
         adjustments = 0
@@ -560,41 +566,51 @@ def make_binary_movie(vid_path_in, vid_path_out, mean_image, threshold, min_area
 
         while adjusting_threshold:
 
-            # Apply the filter_blobs function to the current frame
-            im_thresh = filter_blobs(im, mean_image, threshold, min_area, max_area, white_blobs=True)
-
-            # Fill and smooth the blobs in im_thresh
-            im_thresh2 = fill_and_smooth(im_thresh)
-
-            # Calculate the total area of the blobs
-            total_area = np.sum(im_thresh2 > 0)
-
-            if blob_color == 'grayscale':
-                # Image where all grayscale pixels from im are passed where im_thresh2==255
-                im_filtered = cv2.bitwise_and(im, im, mask=im_thresh2)
-
-            # Quit loop if the area has not changed much
-            if (total_area/total_area0) < (1+thresh_tol) and \
-                (total_area/total_area0) > (1-thresh_tol):
-                adjusting_threshold = False
-
             # Quit loop if threshold has been adjusted more than once and returned to initial value
-            elif (adjustments > 1) and (threshold == threshold_prev):
+            if (adjustments > 1) and threshold in threshold_prev:
+            #elif (adjustments > 1) and (threshold == threshold_prev):
                 adjusting_threshold = False
+                break
 
-            # Increase threshold if area has increased much
-            elif (total_area/total_area0) >= (1+thresh_tol):
-                threshold = threshold + 1
-                adjustments += 1
-                if echo:
-                    print('   ' + status_txt + ' Frame {} : Increasing threshold to {}'.format(frame_num+1, threshold))
+            else:
 
-            # Decrease threshold if area has decreased much
-            elif (total_area/total_area0) <= (1-thresh_tol):
-                threshold = threshold - 1
-                adjustments += 1
-                if echo:
-                    print('   ' + status_txt + ' Frame {} : Decreasing threshold to {}'.format(frame_num+1, threshold))
+                # Apply the filter_blobs function to the current frame
+                im_thresh = filter_blobs(im, mean_image, threshold, min_area, max_area, white_blobs=True)
+
+                # Fill and smooth the blobs in im_thresh
+                im_thresh2 = fill_and_smooth(im_thresh)
+
+                # Calculate the total area of the blobs
+                total_area = np.sum(im_thresh2 > 0)
+
+                if blob_color == 'grayscale':
+                    # Image where all grayscale pixels from im are passed where im_thresh2==255
+                    im_filtered = cv2.bitwise_and(im, im, mask=im_thresh2)
+
+                # Previous value for threshold
+                threshold_prev.append(threshold) 
+
+                # Quit loop if the area has not changed much
+                if (total_area/total_area0) < (1+thresh_tol) and \
+                    (total_area/total_area0) > (1-thresh_tol):
+                    adjusting_threshold = False
+                    break
+
+                # Increase threshold if area has increased much
+                elif (total_area/total_area0) >= (1+thresh_tol):
+                    threshold = threshold + 1
+                    adjustments += 1
+                    if echo:
+                        print('   ' + status_txt + ' Frame {} : Increasing threshold to {}'.format(frame_num+1, threshold))
+
+                # Decrease threshold if area has decreased much
+                elif (total_area/total_area0) <= (1-thresh_tol):
+                    threshold = threshold - 1
+                    adjustments += 1
+                    if echo:
+                        print('   ' + status_txt + ' Frame {} : Decreasing threshold to {}'.format(frame_num+1, threshold))
+
+                     
 
         # Write the frame to the output video
         if blob_color == 'white':
