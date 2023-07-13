@@ -566,14 +566,6 @@ def make_binary_movie(vid_path_in, vid_path_out, mean_image, threshold, min_area
 
         while adjusting_threshold:
 
-            # Quit loop if threshold has been adjusted more than once and returned to initial value
-            if (adjustments > 1) and threshold in threshold_prev:
-            #elif (adjustments > 1) and (threshold == threshold_prev):
-                adjusting_threshold = False
-                break
-
-            else:
-
                 # Apply the filter_blobs function to the current frame
                 im_thresh = filter_blobs(im, mean_image, threshold, min_area, max_area, white_blobs=True)
 
@@ -587,14 +579,18 @@ def make_binary_movie(vid_path_in, vid_path_out, mean_image, threshold, min_area
                     # Image where all grayscale pixels from im are passed where im_thresh2==255
                     im_filtered = cv2.bitwise_and(im, im, mask=im_thresh2)
 
-                # Previous value for threshold
+                # Quit loop if threshold has been adjusted more than once and returned to initial value
+                if (adjustments > 1) and threshold in threshold_prev:
+                #elif (adjustments > 1) and (threshold == threshold_prev):
+                    adjusting_threshold = False
+
+                # Previous value for threshold before updating new threshold
                 threshold_prev.append(threshold) 
 
                 # Quit loop if the area has not changed much
                 if (total_area/total_area0) < (1+thresh_tol) and \
                     (total_area/total_area0) > (1-thresh_tol):
                     adjusting_threshold = False
-                    break
 
                 # Increase threshold if area has increased much
                 elif (total_area/total_area0) >= (1+thresh_tol):
