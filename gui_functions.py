@@ -334,6 +334,12 @@ def create_mask_for_batch(vid_file, mask_file):
     ret, im_start = vid.read()
     vid.release()
 
+    # Convert im_start to 4 channels (BGR-A) by adding an alpha channel
+    # im_start2 = cv2.cvtColor(im_start, cv2.COLOR_BGR2BGRA)
+
+    # make copy of im_start
+    im_start2 = im_start.copy()
+
     # Call the select_polygon() function
     points = select_polygon(im_start)
 
@@ -353,11 +359,35 @@ def create_mask_for_batch(vid_file, mask_file):
     # Generate the binary image from roi
     binary_image = generate_binary_image(im_start, points)
 
-    # Display the binary image
-    create_cv_window('Binary Image')
-    cv2.imshow('Binary Image', binary_image)
+     # Invert the binary image
+    binary_image_inverted = cv2.bitwise_not(binary_image)
+
+    # Create a white image of the same size as im_start
+    white_image = np.ones_like(im_start) * 255
+
+    # Resize the white image to match the size of im_start
+    white_image_resized = cv2.resize(white_image, (im_start.shape[1], im_start.shape[0]))
+
+    # Resize the binary image to match the size of im_start
+    binary_image_inverted_resized = cv2.resize(binary_image_inverted, (im_start.shape[1], im_start.shape[0]))
+
+    # Apply bitwise AND operation to make white pixels transparent
+    im_start_masked = cv2.bitwise_and(im_start2, white_image_resized, mask=binary_image_inverted_resized)
+
+    # Create a blended image by combining im_start and im_start_masked
+    blended_image = cv2.add(im_start2, im_start_masked)
+
+    # Display the blended image
+    create_cv_window('Blended Image')
+    cv2.imshow('Blended Image', blended_image)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
+
+    # # Display the binary image
+    # create_cv_window('Binary Image')
+    # cv2.imshow('Binary Image', binary_image)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
     
     # Save the binary image
     cv2.imwrite(mask_file, binary_image)
