@@ -173,22 +173,21 @@ def select_polygon(frame):
     # Global variables
     points = []
 
-    # # Make a copy of the frame
+    # Make a copy of the frame
     frame_start = frame.copy()
 
-    def display_image_points(frame,points):
-
+    def display_image_points(frame, points):
         # Draw the polygon on the empty image
         curve_points = draw_curves(points, resolution=100)
 
         # Redraw the entire polygon
         frame[:] = frame_start.copy()
         if (len(points) > 1) and (len(points) <= 3):
-            cv2.polylines(frame, [np.array(points)], isClosed=True, color=(0, 255, 0), thickness=2, lineType=cv2.LINE_AA)
+            cv2.polylines(frame, [np.array(points)], isClosed=True, color=(255, 255, 255), thickness=1, lineType=cv2.LINE_AA)
             # Use cv.ploylines to draw the curve_points
 
         elif len(points) > 3:
-            cv2.polylines(frame, [curve_points.astype(np.int32)], isClosed=True, color=(0, 255, 0), thickness=2, lineType=cv2.LINE_AA)
+            cv2.polylines(frame, [curve_points.astype(np.int32)], isClosed=True, color=(255, 255, 255), thickness=1, lineType=cv2.LINE_AA)
 
         for point in points:
             cv2.circle(frame, point, 5, (0, 0, 255), -1)
@@ -196,16 +195,15 @@ def select_polygon(frame):
         # Show the frame with the updated polygon
         cv2.imshow('Frame', frame)
 
-
     def draw_polygon(event, x, y, flags, param):
         """Draws a polygon on the image based on the user's mouse clicks.
-            args:
-                event: The type of mouse event
-                x: The x-coordinate of the mouse click
-                y: The y-coordinate of the mouse click
-                flags: Any relevant flags
-                param: Any extra parameters
-                """
+        args:
+            event: The type of mouse event
+            x: The x-coordinate of the mouse click
+            y: The y-coordinate of the mouse click
+            flags: Any relevant flags
+            param: Any extra parameters
+        """
         nonlocal points
 
         if event == cv2.EVENT_LBUTTONDOWN:
@@ -213,20 +211,24 @@ def select_polygon(frame):
             points.append((x, y))
 
             # Update image
-            display_image_points(frame,points)
+            display_image_points(frame, points)
 
         elif event == cv2.EVENT_RBUTTONDOWN:
             # Remove the last point if right-clicked
             if len(points) > 0:
                 # Remove the point from the list
                 points.pop()
-                
+
                 # Update image
-                display_image_points(frame,points)
+                display_image_points(frame, points)
+
+        # Draw red cross-hairs at the cursor position
+        frame_crosshair = frame.copy()
+        cv2.line(frame_crosshair, (x, 0), (x, frame_crosshair.shape[0]), (0, 0, 255), 1)  # Vertical line
+        cv2.line(frame_crosshair, (0, y), (frame_crosshair.shape[1], y), (0, 0, 255), 1)  # Horizontal line
+        cv2.imshow('Frame', frame_crosshair)
 
     # Create a window and set the mouse callback
-    # cv2.namedWindow('Frame')
-    # Create a window to display the image
     create_cv_window('Frame')
     cv2.setMouseCallback('Frame', draw_polygon)
 
