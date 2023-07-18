@@ -245,12 +245,14 @@ def run_experiment_schedule(dmx, aud_path, log_path, schedule_path, LED_IP=None,
         # if next_starttime_obj is earlier than current time, then start immediately instead
         if next_starttime_obj < dt.datetime.now():
             next_starttime_obj = starttime_obj 
+            print('---- Using current time to start, rather than a future time ----')
 
         return next_starttime_obj
 
     # Check that date matches today's date
     if date != dt.datetime.now().strftime("%Y-%m-%d"):
         raise ValueError("Schedule file is not for today and the code assumes that it is.")
+        # print('WARNING: Schedule file is not for today and the code assumes that it is.')
 
     # find match of date in log['date'].values and sch_num in log['sch_num'].values
     matching_log = log[(log['date']==date) & (log['sch_num']==sch_num)]
@@ -271,7 +273,9 @@ def run_experiment_schedule(dmx, aud_path, log_path, schedule_path, LED_IP=None,
         next_trial = 1
 
         # Time for starting the next ramp, before next experiment
-        next_starttime_obj = starttime_obj + dt.timedelta(minutes = schedule.loc[0, 'start_time_min']) - dt.timedelta(seconds = float(schedule.loc[0, 'pre_ramp_dur_sec']))
+        next_starttime_obj = starttime_obj + \
+                            dt.timedelta(minutes = float(schedule.loc[0, 'start_time_min'])) - \
+                            dt.timedelta(seconds = float(schedule.loc[0, 'pre_ramp_dur_sec']))
 
     #  Max trial number in schedule
     max_trial = schedule['trial_num'].max()
@@ -312,7 +316,7 @@ def run_experiment_schedule(dmx, aud_path, log_path, schedule_path, LED_IP=None,
             time.sleep(1)
 
         # Print next_starttime_obj in YYY-MM-DD format
-        print("Starting trial {} at {}".format(trial, next_starttime_obj.strftime("%Y-%m-%d, %H:%M:%S")))
+        # print("Starting trial {} at {}".format(trial, next_starttime_obj.strftime("%Y-%m-%d, %H:%M:%S")))
 
         # Run pre-experiment ramp (not logged)
         run_program(dmx, aud_path, light_level=[light_btwn, light_start], light_dur=None, ramp_dur=pre_dur, 
@@ -342,7 +346,10 @@ def run_experiment_schedule(dmx, aud_path, log_path, schedule_path, LED_IP=None,
 
         # When to start the next experiment
         if trial<np.max(trials):
-            next_starttime_obj = calc_starttime(schedule, log, date, sch_num, trial+1)       
+            next_starttime_obj = calc_starttime(schedule, log, date, sch_num, trial+1)      
+
+            # Report next start
+            print("    Next: trial {} at {}".format(trial+1, next_starttime_obj.strftime("%Y-%m-%d, %H:%M:%S"))) 
 
     return
 
@@ -414,6 +421,7 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
         if not np.isnan(iLog):
             prev_date = log.date[iLog]
 
+       
         # # Previous take number + 1 to new filename, if prev filename is not a nan
         # if np.isnan(iLog) or pd.isnull(log.video_filename[iLog]):
         #     prev_take = int(take_num) - 1
@@ -425,6 +433,10 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
     start_time = time.time()
     curr_time  = 0
     end_time   = max(df.time)
+
+    # Report start
+    if log_path!=None:
+        print("Starting trial {} at {}".format(trial_num, starttime_str)) 
 
     if control_hw and trig_video:
         p = multiprocess.Process(target=playsound, args=(aud_path, ))
@@ -480,8 +492,8 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
 
         # Data to add to log
         log_data = {
-            'date': [curr_date.strftime("%Y-%m-%d")],
-            'sch_num': [int(sch_num)],
+            'date': [curr_date.strftime("%Y-%m-%d")],   
+            'sch_num': [int(sch_num)], 
             'trial_num' : [int(trial_num)],
             'start_time': [starttime_str],
             'video_filename': [vid_filename]
