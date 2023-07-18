@@ -576,8 +576,12 @@ def make_binary_movie(vid_path_in, vid_path_out, mean_image, threshold, min_area
                 total_area = np.sum(im_thresh2 > 0)
 
                 if blob_color == 'grayscale':
+                    
+                    # Flip pixel intensities
+                    im_invert = invert_image(im)
+                    
                     # Image where all grayscale pixels from im are passed where im_thresh2==255
-                    im_filtered = cv2.bitwise_and(im, im, mask=im_thresh2)
+                    im_filtered = cv2.bitwise_and(im_invert, im_invert, mask=im_thresh2)
 
                 # Quit loop if threshold has been adjusted more than once and returned to initial value
                 if (adjustments > 1) and threshold in threshold_prev:
@@ -630,6 +634,24 @@ def make_binary_movie(vid_path_in, vid_path_out, mean_image, threshold, min_area
     # close video
     vid_in.release()
     vid_out.release()
+
+
+def invert_image(image):
+    """ Invert the colors of an image.
+    Args:
+        image: A numpy array of shape (rows, columns, channels) or (rows, columns).
+    Returns:
+        inverted_image: A numpy array of shape (rows, columns, channels) or (rows, columns).
+    """
+    # Check if the image is already grayscale
+    if len(image.shape) == 2:  # If the image has only two dimensions, it is already grayscale
+        inverted_image = 255 - image
+    else:  # Convert the image to grayscale and then invert
+        gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        inverted_image = 255 - gray_image
+
+    return inverted_image
+
 
 def display_image(im):
     # Display the binary image
