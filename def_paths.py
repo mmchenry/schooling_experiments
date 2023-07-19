@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import tkinter as tk
 import screeninfo
+import platform
 
 
 def give_paths(root_path, proj_name):
@@ -144,56 +145,69 @@ def get_screen_resolution():
 
 
 def show_confirmation_dialog(quest_text):
-    # Create the main window
-    root = tk.Tk()
-    root.title("Confirmation")
 
-    # Define the font for the question
-    question_font = ("Arial", 40)
+    # Linux/Windows
+    if not platform.system()=='Darwin':
+        # Create the main window
+        root = tk.Tk()
+        root.title("Confirmation")
 
-    # Create a label for the question
-    question_label = tk.Label(root, text=quest_text, font=question_font)
-    question_label.pack(padx=20, pady=20)
+        # Define the font for the question
+        question_font = ("Arial", 40)
 
-    # Initialize the answer variable
-    answer = None
+        # Create a label for the question
+        question_label = tk.Label(root, text=quest_text, font=question_font)
+        question_label.pack(padx=20, pady=20)
 
-    # Function to handle the "Yes" button click
-    def on_yes():
-        nonlocal answer
-        answer = True
-        root.destroy()
+        # Initialize the answer variable
+        answer = None
 
-    # Function to handle the "No" button click
-    def on_no():
-        nonlocal answer
-        answer = False
-        root.destroy()
+        # Function to handle the "Yes" button click
+        def on_yes():
+            nonlocal answer
+            answer = True
+            root.destroy()
 
-    # Create the "Yes" button
-    yes_button = tk.Button(root, text="Yes", font=("Arial", 24), command=on_yes)
-    yes_button.pack(padx=10, pady=10)
+        # Function to handle the "No" button click
+        def on_no():
+            nonlocal answer
+            answer = False
+            root.destroy()
 
-    # Create the "No" button
-    no_button = tk.Button(root, text="No", font=("Arial", 24), command=on_no)
-    no_button.pack(padx=10, pady=10)
+        # Create the "Yes" button
+        yes_button = tk.Button(root, text="Yes", font=("Arial", 24), command=on_yes)
+        yes_button.pack(padx=10, pady=10)
 
-    # Get screen resolution
-    screen_width, screen_height = get_screen_resolution()
+        # Create the "No" button
+        no_button = tk.Button(root, text="No", font=("Arial", 24), command=on_no)
+        no_button.pack(padx=10, pady=10)
 
-    # Get the window size
-    window_width = root.winfo_reqwidth()
-    window_height = root.winfo_reqheight()
+        # Get screen resolution
+        screen_width, screen_height = get_screen_resolution()
 
-    # Calculate the position for the GUI window to appear centered
-    position_x = int((screen_width - window_width) / 2)
-    position_y = int((screen_height - window_height) / 2)
+        # Get the window size
+        window_width = root.winfo_reqwidth()
+        window_height = root.winfo_reqheight()
 
-    # Set the position of the GUI window on the screen
-    root.geometry(f"+{position_x}+{position_y}")
+        # Calculate the position for the GUI window to appear centered
+        position_x = int((screen_width - window_width) / 2)
+        position_y = int((screen_height - window_height) / 2)
 
-    # Start the GUI main loop
-    root.mainloop()
+        # Set the position of the GUI window on the screen
+        root.geometry(f"+{position_x}+{position_y}")
+
+        # Start the GUI main loop
+        root.mainloop()
+
+    # For Macs
+    else:
+        ans_str = input(quest_text +  '(y/n)')
+        if ans_str=='y':
+            answer = True
+        elif ans_str=='n':
+            answer = False
+        else:
+            return None
 
     return answer
 
