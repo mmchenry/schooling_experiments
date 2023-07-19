@@ -427,11 +427,12 @@ def add_param_vals(cat_path, param_list_tgrabs, param_list_trex):
         print('Updated default values to cat file: ' + cat_path)
 
 
-def run_tgrabs(cat_path, vid_path_in, vid_path_out,  param_list_tgrabs, vid_ext_proc='mp4', use_settings_file=False,
+def run_tgrabs(cat_path, raw_path, vid_path_in, vid_path_out,  param_list_tgrabs, vid_ext_proc='mp4', use_settings_file=False,
                run_gui=True, echo=True, run_command=True, settings_path=None):
     """ Runs TGrabs on all videos listed in the catalog file
     Args:
         cat_path (str): Path to catalog file
+        raw_path (str): Path to raw data (where settings files will be saved)
         vid_path_in (str): Path to input videos
         vid_path_out (str): Path to output videos
         param_list_tgrabs (list): List of tuples with parameter name and value for tgrabs
@@ -444,11 +445,13 @@ def run_tgrabs(cat_path, vid_path_in, vid_path_out,  param_list_tgrabs, vid_ext_
     Returns:
         commands (list): List of commands
     """
+
+    
     if use_settings_file:
         # Define input parameter list for TGrabs as dataframe
-        param_input = pd.DataFrame(param_list_tgrabs, columns=['param_name', 'param_val'])
-
+        param_input = pd.DataFrame(columns=['param_name', 'param_val'])
         # Add the TRex parameter listing to the TGrabs parameters (might improve the preliminary tracking)
+        param_input.append(param_list_tgrabs)
         param_input.append(param_list_trex)
 
     # Extract experiment catalog info
@@ -484,6 +487,10 @@ def run_tgrabs(cat_path, vid_path_in, vid_path_out,  param_list_tgrabs, vid_ext_
 
         # Otherwise, proceed with tGrabs . . .
         else:
+            
+            # Write settings file
+            settings_path = raw_path + os.sep + filename + '.settings'
+            param_input.to_csv(settings_path, index=False)
 
             # Output path
             path_out = vid_path_out + os.sep + filename + '.pv'
@@ -551,9 +558,12 @@ def run_trex(cat_path, vid_path, data_path, param_list_trex, cat_to_trex, use_se
         commands (list): List of commands
     """
 
+    # Parameter list for TGrabs/TRex
+    param_input = pd.DataFrame(columns=['param_name', 'param_val'])
+
     if use_settings_file:
         # Define input parameter list for TGrabs as dataframe
-        param_input = pd.DataFrame(param_list_trex, columns=['param_name', 'param_val'])
+        param_input.append(param_list_tgrabs)
 
         # Add the TRex parameter listing to the TGrabs parameters (might improve the preliminary tracking)
         param_input.append(param_list_trex)
@@ -593,7 +603,8 @@ def run_trex(cat_path, vid_path, data_path, param_list_trex, cat_to_trex, use_se
         else:
 
             # Start formulating the TRex command
-            command = f'trex -i {path_in} -output_dir {data_path} '
+            settings_path = data_path + os.sep + filename + '.settings'
+            command = f'trex -i {path_in} -output_dir {data_path} -s {settings_path} '
 
             # Whether to launch gui
             if run_gui:
