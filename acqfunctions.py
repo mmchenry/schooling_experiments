@@ -616,10 +616,8 @@ def run_trex(cat_path, vid_path, data_path, param_list_trex, cat_to_trex, use_se
 
             if output_posture:
                 command += '-output_posture_data true '
-                command += '-gui_happy_mode true '
             else:
                 command += '-output_posture_data false '
-                command += '-gui_happy_mode false '
 
             # Add additional default parameters
             command += '-fishdata_dir \'trex_fishdata\' '
@@ -636,7 +634,7 @@ def run_trex(cat_path, vid_path, data_path, param_list_trex, cat_to_trex, use_se
             # loop thru each entry in param_list_tgrabs, and add the value for that parameter in the column of cat_curr
             # that has the same name as the parameter (nans excluded)
             for param in param_list_trex:
-                value = str(cat_curr[param[0]][c_row])
+                value = str(cat_curr[param[0]][c_row]).lower()
                 if pd.notna(value) and value != 'nan' and value != 'null':
                     command += f'-{param[0]} {value} '
 
