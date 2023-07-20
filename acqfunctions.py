@@ -491,7 +491,7 @@ def run_tgrabs(cat_path, raw_path, vid_path_in, vid_path_out,  param_list_tgrabs
             
             # Write settings file
             settings_path = raw_path + os.sep + filename + '.settings'
-            param_input.to_csv(settings_path, index=False)
+            #param_input.to_csv(settings_path, index=False)
 
             # Output path
             path_out = vid_path_out + os.sep + filename + '.pv'
