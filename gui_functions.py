@@ -4,10 +4,209 @@ import os
 import video_preprocess as vp
 import cv2
 import numpy as np
+import pandas as pd
 from scipy.interpolate import splprep, splev
 import math
 from shapely.geometry import Polygon
+import acqfunctions as af
 
+
+def run_threshold_choice(path, sch_date, sch_num, analysis_schedule, vid_ext_raw, font_size=30, overwrite_existing=False):
+
+    # Get schedule data
+    sch = pd.read_csv(path['sch'] + os.sep + analysis_schedule + '.csv')
+
+    # Extract experiment catalog info
+    cat = af.get_cat_info(path['cat'], include_mode='both', exclude_mode='calibration')
+
+    # Read the full cat file
+    cat_raw = pd.read_csv(path['cat'])
+
+    # Path to all videos for the current date
+    vid_path = path['vidin'] + os.sep +  sch_date
+
+    # Flag any large differences in video duration from experiment log, return list of videos to be processed
+    vid_files = vp.check_video_duration(vid_path, sch, cat, vid_ext=vid_ext_raw, thresh_time=3.0)
+
+    # Check if 'min_area' column exists in cat_raw and does not have nans
+    if ('min_area' not in cat_raw.columns) or (cat_raw['min_area'].isnull().any()) or overwrite_existing:
+
+        # Get the mask
+        mask_filename = af.generate_filename(sch_date, sch_num, trial_num=None)
+        mask_path = path['mask'] + os.sep + mask_filename + '_mask.jpg'
+        im_mask, mask_perim = vp.get_mask(mask_path)
+
+        # Get the mean image
+        mean_image_path = path['mean'] + os.sep + mask_filename + '_mean.jpg'
+        mean_image = cv2.imread(mean_image_path, cv2.IMREAD_UNCHANGED)
+
+        # read first frame of first video
+        vid_path_curr = vid_path + os.sep + vid_files[0]
+        vid = cv2.VideoCapture(vid_path_curr)
+        im_start = vp.read_frame(vid, 0, im_mask=im_mask, mask_perim=mask_perim, im_crop=True)
+        vid.release()
+
+        # Select the threshold
+        threshold, im_thresholded = interactive_threshold(im_start, mean_image)
+        print('Selected threshold = ' + str(threshold))
+
+        # Select the bounds of blob area
+        print(' ')
+        print('Select the bounds of blob area that include just a single fish')
+        min_area, max_area = interactive_blob_filter(im_start, mean_image, threshold)
+        print('Selected min_area = ' + str(min_area))
+        print('Selected max_area = ' + str(max_area))
+
+        # Save results to experiment_log.csv
+        cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == sch_num), 'threshold'] = threshold
+        cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == sch_num), 'min_area'] = min_area
+        cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == sch_num), 'max_area'] = max_area
+
+        # Write cat_raw, if it has the same dimensions, or one new column
+        cat_raw.to_csv(path['cat'], index=False)
+        print(' ')
+        print('Added threshold and area values to experiment_log.csv')
+
+    else:
+        print(' ')
+        print('Threshold and area values already exist in experiment_log.csv for the current date and schedule number.')
+
+
+def run_spatial_calibration(path, sch_date, sch_num, vid_ext_raw, analysis_schedule, font_size=40, overwrite_existing=False):
+    """ Runs the spatial calibration, if necessary.
+    Args:
+        path (dict): Dictionary of paths
+        sch_date (str): Date of the experiment
+        sch_num (int): Schedule number
+        vid_ext_raw (str): Video file extension
+        analysis_schedule (str): Analysis schedule
+        font_size (int): Font size for the text.
+        """
+
+    # Get schedule data
+    sch = pd.read_csv(path['sch'] + os.sep + analysis_schedule + '.csv')
+
+    # Extract experiment catalog info
+    cat = af.get_cat_info(path['cat'], include_mode='both', exclude_mode='calibration')
+
+    # Path to all videos for the current date
+    vid_path = path['vidin'] + os.sep +  sch_date
+
+     # Flag any large differences in video duration from experiment log, return list of videos to be processed
+    vid_files = vp.check_video_duration(vid_path, sch, cat, vid_ext=vid_ext_raw, thresh_time=3.0)
+
+    # Read the full cat file
+    cat_raw = pd.read_csv(path['cat'])
+
+    # Get the size of the cat_raw
+    cat_raw_size = cat_raw.shape
+
+    # Determine if cm_per_pix values already exsist in cat_raw where date==sch_date and sch_num==sch_num
+    cm_per_pix_exists = cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == sch_num), 'cm_per_pix'].values
+
+    # If there's any missing calibration values . . .
+    if max(np.isnan(cm_per_pix_exists)) or overwrite_existing:
+
+        # Find video_filename for calibration from cat_raw: where the date matches sch_date and the sch_num is 999
+        cal_video_filename = cat_raw[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == 999)]['video_filename'].values
+
+        # Define the full path to the calibration video
+        full_vid_path = vid_path + os.sep + cal_video_filename[0] + '.' + vid_ext_raw
+
+        # Raise exception if cal_video_filename has a length of zero
+        if len(cal_video_filename) == 0:
+            raise ValueError('The calibration video does not exist in the catalog file')
+        # Or, more than one
+        elif len(cal_video_filename) > 1:
+            raise ValueError('More than one calibration video exists in the catalog file')
+
+        # Raise exception if cal_video_filename is not in vid_path
+        if not os.path.exists(full_vid_path):
+            raise ValueError('The calibration video does not exist in the video directory: ' + full_vid_path)
+
+        # Run the spatial calibration
+        cm_per_pix = spatial_calibration(full_vid_path, reps=3, font_size=font_size)
+
+        # Add cm_per_pix value to cat_raw.cm_per_pix where sch_num=sch_num
+        cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == sch_num), 'cm_per_pix'] = cm_per_pix
+
+        # Write cat_raw, if it has the same dimensions, or one new column
+        if (cat_raw.shape[0] == cat_raw_size[0]) and \
+            (cat_raw.shape[1] == cat_raw_size[1]):
+            cat_raw.to_csv(path['cat'], index=False)
+            print(' ')
+            print('Added cm_per_pix values to experiment_log.csv')
+        else:
+            # raise exception
+            raise ValueError('cat_raw has the wrong dimensions-- cannot write the time code data to experiment_log')
+        
+    else:
+        print(' ')
+        print('cm_per_pix values already exist in experiment_log.csv for the current date and schedule number.')
+
+
+def run_mask_acq(path, sch_date, sch_num, vid_ext_raw, analysis_schedule, overwrite_existing=False):
+    """ Runs the mask acquisition of the mask image, if necessary.
+    Args:
+        path (dict): Dictionary of paths
+        sch_date (str): Date of the experiment
+        sch_num (int): Schedule number
+        vid_ext_raw (str): Video file extension
+        analysis_schedule (str): Analysis schedule
+    """
+
+     # Get schedule data
+    sch = pd.read_csv(path['sch'] + os.sep + analysis_schedule + '.csv')
+
+    # Extract experiment catalog info
+    cat = af.get_cat_info(path['cat'], include_mode='both', exclude_mode='calibration')
+
+     # Path to all videos for the current date
+    vid_path = path['vidin'] + os.sep +  sch_date
+
+     # Flag any large differences in video duration from experiment log, return list of videos to be processed
+    vid_files = vp.check_video_duration(vid_path, sch, cat, vid_ext=vid_ext_raw, thresh_time=3.0)
+
+    # Define the mask filename
+    mask_filename = af.generate_filename(sch_date, sch_num, trial_num=None)
+    mask_path = path['mask'] + os.sep + mask_filename + '_mask.jpg'
+
+    # If the mask file does not exist, then create it
+    if (not os.path.exists(mask_path)) or overwrite_existing:
+        centroid = create_mask_for_batch(vid_path+os.sep+vid_files[0], mask_path)
+    else:
+        print(' ')
+        print('Mask file and roi already exists. Using existing mask file: ' + mask_path)   
+
+    # Read the full cat file
+    cat_raw = pd.read_csv(path['cat'])
+
+    # Get the size of the cat_raw
+    cat_raw_size = cat_raw.shape
+
+    # Determine if roi centroid values already exists in cat_raw where date==sch_date and sch_num==sch_num
+    roi_x_exists = cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == sch_num), 'roi_x'].values
+    roi_y_exists = cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == sch_num), 'roi_y'].values
+
+    # If there are any missing roi values . . .
+    if (roi_x_exists.size==0) or max(np.isnan(roi_x_exists)):
+        # Find video_filename for calibration from cat_raw: where the date matches sch_date and the sch_num is 999
+        cal_video_filename = cat_raw[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == 999)]['video_filename'].values
+
+        # Add roi centroid value to cat_raw.roi_x and cat_raw.roi_y where sch_num=sch_num
+        cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == sch_num), 'roi_x'] = centroid[0]
+        cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == sch_num), 'roi_y'] = centroid[1]
+
+        # Write cat_raw, if it has the same dimensions, or one new column
+        if (cat_raw.shape[0] == cat_raw_size[0]) and \
+            (cat_raw.shape[1] == cat_raw_size[1]):
+            cat_raw.to_csv(path['cat'], index=False)
+            print(' ')
+            print('Added roi centroid values to experiment_log.csv')
+        else:
+            # raise exception
+            raise ValueError('cat_raw has the wrong dimensions-- cannot write the roi centroid data to experiment_log')
+    
 
 # The following is used to generate GUIs
 def get_screen_resolution():
@@ -400,7 +599,7 @@ def create_mask_for_batch(vid_file, mask_file):
     return centroid
 
 
-def run_spatial_calibration(vid_file, reps=3, font_size=40):
+def spatial_calibration(vid_file, reps=3, font_size=40):
     """Run spatial calibration.
     Args:
         vid_file (str): Video file.

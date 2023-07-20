@@ -6,19 +6,174 @@ import os
 import cv2
 import numpy as np
 import pandas as pd
-import subprocess
+import acqfunctions as af
+# import subprocess
 import gui_functions as gf
 import time
+import sys
 
 
-def find_schedule_matches(csv_dir, match_dir):
+def run_make_binary_videos(run_mode, path, local_path, sch_date, sch_num, vid_ext_raw, vid_ext_proc, mov_idx=0):
+
+     # Path to all videos for the current date
+    vid_path = path['vidin'] + os.sep +  sch_date
+
+    # Extract experiment catalog info
+    cat = af.get_cat_info(path['cat'], include_mode='both', exclude_mode='calibration')
+
+    # Return a version of cat for all matches of the sch_num column that matches sch_num
+    cat_curr = cat[cat['sch_num'] == sch_num]
+
+    # Get the mask
+    mask_filename = af.generate_filename(sch_date, sch_num, trial_num=None)
+    mask_path = path['mask'] + os.sep + mask_filename + '_mask.jpg'
+    im_mask, mask_perim = get_mask(mask_path)
+
+    # Get the mean image
+    mean_image_path = path['mean'] + os.sep + mask_filename + '_mean.jpg'
+    mean_image = cv2.imread(mean_image_path, cv2.IMREAD_UNCHANGED)
+
+    if run_mode == 'single':
+
+        if mov_idx is None:
+            raise ValueError('mov_idx must be defined if run_mode is \'single\'.')
+
+        # Single video address in cat_curr
+        row = cat_curr.iloc[mov_idx]
+
+        # Paths for input and output videos
+        vid_path_in = vid_path + os.sep + row['video_filename'] + '.' + vid_ext_raw
+        vid_file_out = af.generate_filename(row['date'], row['sch_num'], trial_num=row['trial_num'])
+        vid_path_out = local_path + os.sep + vid_file_out + '.' + vid_ext_proc
+
+        # Set bounds of the area for blobs
+        min_area = int(row['min_area']/4)
+        max_area = int(10*row['max_area'])
+
+        print('Video in: '  + vid_path_in)
+        print('Video out: ' + vid_path_out)
+        status_txt = 'Trial ' + str(row['trial_num'])
+
+        # Generate and save binary movie
+        make_binary_movie(vid_path_in, vid_path_out, mean_image, row['threshold'], min_area, max_area, \
+                                im_mask=im_mask, mask_perim=mask_perim, im_crop=True, status_txt=status_txt, echo=True, blob_color='grayscale')
+        
+    elif run_mode == 'sequential':
+
+        # Loop thru each row of cat_curr
+        for index, row in cat_curr.iterrows():
+
+            # Paths for input and output videos
+            vid_path_in = vid_path + os.sep + row['video_filename'] + '.' + vid_ext_raw
+            vid_file_out = af.generate_filename(row['date'], row['sch_num'], trial_num=row['trial_num'])
+            vid_path_out = local_path + os.sep + vid_file_out + '.' + vid_ext_proc
+
+            # Set bounds of the area for blobs
+            min_area = int(row['min_area']/4)
+            max_area = int(10*row['max_area'])
+
+            print('Video in: '  + vid_path_in)
+            print('Video out: ' + vid_path_out)
+
+            status_txt = 'Trial ' + str(row['trial_num'])
+
+            # Generate and save binary movie
+            make_binary_movie(vid_path_in, vid_path_out, mean_image, row['threshold'], min_area, max_area,
+                                im_mask=im_mask, mask_perim=mask_perim, im_crop=True, status_txt=status_txt, echo=True, blob_color='white')
+            
+    elif run_mode == 'parallel':
+
+        import concurrent.futures
+        import time
+
+        # Define a function to process each row in parallel
+        def process_row(row):
+            # Paths for input and output videos
+            vid_path_in = vid_path + os.sep + row['video_filename'] + '.' + vid_ext_raw
+            vid_file_out = af.generate_filename(row['date'], row['sch_num'], trial_num=row['trial_num'])
+            vid_path_out = local_path + os.sep + vid_file_out + '.' + vid_ext_proc
+
+            # Set bounds of the area for blobs
+            min_area = int(row['min_area'] / 4)
+            max_area = int(10*row['max_area'])
+
+            status_txt = 'Trial ' + str(row['trial_num'])
+
+            # Generate and save binary movie
+            make_binary_movie(vid_path_in, vid_path_out, mean_image, row['threshold'], min_area, max_area,
+                im_mask=im_mask, mask_perim=mask_perim, im_crop=True, status_txt=status_txt, echo=True, blob_color='grayscale')
+
+        # Create a ThreadPoolExecutor to execute the iterations in parallel
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            # Loop thru each row of cat_curr and submit each iteration as a separate task
+            futures = [executor.submit(process_row, row) for _, row in cat_curr.iterrows()]
+
+            # Wait for all tasks to complete
+            concurrent.futures.wait(futures)
+
+        # Calculate the total execution time
+        execution_time = (time.time() - start_time)/60/60
+        print("Total execution time: {:.2f} hours".format(execution_time))
+
+    else:
+        raise ValueError('run_mode must be \'single\', \'sequential\', or \'parallel\'.')
+    
+
+def run_mean_image(path, sch_num, sch_date, analysis_schedule, max_num_frame_meanimage=200, font_size=30, overwrite_existing=False):
+
+    # Get schedule data
+    sch = pd.read_csv(path['sch'] + os.sep + analysis_schedule + '.csv')
+
+    # Extract experiment catalog info
+    cat = af.get_cat_info(path['cat'], include_mode='both', exclude_mode='calibration')
+
+    # Return a version of cat for all matches of the sch_num column that matches sch_num
+    cat_curr = cat[cat['sch_num'] == sch_num]
+
+     # Path to all videos for the current date
+    vid_path = path['vidin'] + os.sep +  sch_date
+    
+    # Define the mask filename
+    mask_filename = af.generate_filename(sch_date, sch_num, trial_num=None)
+    mask_path = path['mask'] + os.sep + mask_filename + '_mask.jpg'
+
+    # Mean image path
+    mean_image_path = path['mean'] + os.sep + mask_filename + '_mean.jpg'
+
+    # If the mean image does not exist, then create it
+    if (not os.path.exists(mean_image_path)) or overwrite_existing:
+
+        # Find the mask
+        im_mask, mask_perim = get_mask(mask_path)
+
+        # Make mean image
+        mean_image = make_max_mean_image(cat_curr, sch, vid_path, max_num_frame_meanimage, im_mask=im_mask, mask_perim=mask_perim, im_crop=True)
+
+        # Save the mean image
+        mean_image_path = path['mean'] + os.sep + mask_filename + '_mean.jpg'
+        cv2.imwrite(mean_image_path, mean_image)
+
+    # If the mean image does exist, then read it
+    else:
+        # Read the mean image
+        mean_image = cv2.imread(mean_image_path, cv2.IMREAD_UNCHANGED)
+
+    # Display the binary image
+    gf.create_cv_window('Mean image')
+    cv2.imshow('Mean image', mean_image)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+
+def find_schedule_matches(csv_dir, match_dir, font_size=30):
     """Find matching video files in the match directory based on the first 10 characters of the filename
     Args:
         csv_dir (str): Path to the directory containing the CSV files.
         match_dir (str): Path to the directory containing the matching files.
+        font_size (int): Font size for GUI.
     Returns:
-        matching_files (list): List of filenames that match.
-        other_files (list): List of filenames that do not match.
+        sch_num (int): Schedule number.
+        sch_date (str): Schedule date.
     """
 
     # Get filenames of CSV files without extensions
@@ -33,7 +188,122 @@ def find_schedule_matches(csv_dir, match_dir):
         else:
             other_files.append(file)
 
-    return matching_files, other_files
+    # if matching_directories is empty, then say so and exit
+    if len(matching_files) == 0:
+        print(' ')
+        print("No matching directories found between the dates in the schedule list and the dates in the video directory.")
+        print('Schedule directory:',  csv_dir)
+        print('Video directory:',     match_dir)
+        print(' ')
+        sys.exit()
+
+    # If there are matches . . .
+    else:
+        # if nonmatching_directories is not empty, then print the list of nonmatching directories
+        if len(other_files) > 0:
+            print("Note that the following schedules do not have matching dates in the video directory:")
+            for directory in other_files:
+                print('   ' + directory)
+
+        # Use the list of matching directories for user selection
+        analysis_schedule = gf.select_item(matching_files, 'Select which schedule to work on', font_size=font_size)
+
+        # define sch_num as the number given from the last two characters of analysis_schedule
+        sch_num = int(analysis_schedule[-2:])
+
+        # define sch_date as the date given from the first 10 characters of analysis_schedule
+        sch_date = analysis_schedule[:10]
+
+    return sch_num, sch_date, analysis_schedule
+
+
+def check_logs(path, analysis_schedule, sch_num, sch_date, vid_ext_raw):
+    """ Check that the schedule matches the catalog and the catalog matches the experiment log. Also check that the video files exist. Add timecode data experiment_log.csv if it does not exist.
+    Args:
+        path (dict): Dictionary of paths.
+        analysis_schedule (str): Name of analysis schedule.
+        sch_num (int): Schedule number.
+        sch_date (str): Schedule date.
+        vid_ext_raw (str): Raw video file extension.
+        """
+
+
+    # Get schedule data
+    sch = pd.read_csv(path['sch'] + os.sep + analysis_schedule + '.csv')
+
+    # Extract experiment catalog info
+    cat = af.get_cat_info(path['cat'], include_mode='both', exclude_mode='calibration')
+    if len(cat) == 0:
+        raise ValueError('No videos requested to work on from experiment_log.' + \
+                        ' Both the columns \'analyze\' and \'make_video\' must be' + \
+                        ' set to 1 for pre-processing.')
+
+    # Extract experiment log info
+    log = pd.read_csv(path['data'] + os.sep + 'recording_log.csv')
+
+    # Return a version of cat for all matches of the sch_num column that matches sch_num
+    cat_curr = cat[cat['sch_num'] == sch_num]
+
+    # Return a version of log for all matches of the sch_num column that matches sch_num and all matches of the sch_date column that matches sch_date
+    log_curr = log[(log['sch_num'] == sch_num) & (log['date'] == sch_date)]
+
+    # Check if the number of rows of the schedule matches the number of rows of the current catalog
+    if cat_curr.shape[0]!=sch.shape[0]:
+        print(' ')
+        print('WARNING: The number of rows of the schedule do not match the current catalog from experiment_log.csv.')
+
+    # Make list of any trial numbers in sch that do not match any trial num in cat_curr
+    missing_trials_cat = [trial for trial in sch['trial_num'] if trial not in cat_curr['trial_num'].values]
+    missing_trials_log = [trial for trial in sch['trial_num'] if trial not in log_curr['trial_num'].values]
+
+    # If there are missing trials, then print the list of missing trials
+    print(' ')
+    if len(missing_trials_cat) > 0:
+        print("Note that the following trials in the schedule do not have matching videos in experiment_log.csv:")
+        for trial in missing_trials_cat:
+            print('   ' + str(trial))
+    else:
+        print('All trials in the schedule have matching videos in experiment_log.csv')
+
+    # If there are missing trials, then print the list of missing trials
+    print(' ')
+    if len(missing_trials_log) > 0:
+        print("Note that the following trials in the schedule do not have matching videos in recording_log.csv:")
+        for trial in missing_trials_log:
+            print('   ' + str(trial))
+    else:
+        print('All trials in the schedule have matching videos in recording_log.csv')
+
+    # Path to all videos for the current date
+    vid_path = path['vidin'] + os.sep +  sch_date
+
+    # Flag any large differences in video duration from experiment log, return list of videos to be processed
+    vid_files = check_video_duration(vid_path, sch, cat, vid_ext=vid_ext_raw, thresh_time=3.0)
+
+    # Read the full cat file
+    cat_raw = pd.read_csv(path['cat'])
+
+    # Check if any timecode values have not been specified
+    all_timecodes_specified = False
+    if 'timecode_start' in cat_raw.columns:
+        # Filter the DataFrame based on the condition
+        filtered_data = cat_raw[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == sch_num)]
+
+        # Check if all timecode values are specified
+        all_timecodes_specified = filtered_data['timecode_start'].notnull().all()
+        
+    # If there's any missing calibration values . . .
+    if not all_timecodes_specified:
+        # Add timecode data to cat_raw
+        cat_raw = add_start_timecodes(vid_files, vid_path, cat_raw)
+
+        # Write cat_raw, if it has the same dimensions, or one new column
+        cat_raw.to_csv(path['cat'], index=False)
+        print(' ')
+        print('Added time code data to experiment_log.csv')
+    else:
+        print(' ')
+        print('Time code data already exists in experiment_log.csv')
 
 
 def check_video_duration(vid_dir, sch, cat, vid_ext='MOV', thresh_time=3.0):
@@ -283,8 +553,6 @@ def make_max_mean_image(cat_curr, sch, vid_path, max_num_frames, im_mask=None, m
     light_start_max  = sch['light_start'] == max_light
     light_end_max    = sch['light_end'] == max_light
     light_return_max = sch['light_return'] == max_light
-
-    # TODO: Add timecode_start to starting time
 
     # Calculate the starting and ending times for each light_start, light_end, and light_return
     start_starttime  = np.zeros(sch.shape[0])

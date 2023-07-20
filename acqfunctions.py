@@ -23,6 +23,7 @@ def generate_filename(date, sch_num, trial_num=None):
     else:
         return date + '_sch' + str(int(sch_num)).zfill(3) + '_tr' + str(int(trial_num)).zfill(3)
 
+
 def get_cat_info(cat_path, include_mode='both', exclude_mode='calibration'):
     """ Extracts key parameters from experiment catalog for making videos from image sequence.
     Videos included are the ones where analyze==1 and make_video==1.
