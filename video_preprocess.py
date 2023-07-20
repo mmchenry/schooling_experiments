@@ -13,60 +13,57 @@ import time
 import sys
 
 
-def run_make_binary_videos(run_mode, path, local_path, sch_date, sch_num, vid_ext_raw, vid_ext_proc, mov_idx=0):
-
-     # Path to all videos for the current date
-    vid_path = path['vidin'] + os.sep +  sch_date
+def run_make_binary_videos(run_mode, path, local_path, proj_name, vid_ext_raw, vid_ext_proc, mov_idx=0):
+    """Run make_binary_movie() for all videos in cat where make_video==1.
+    Args:
+        run_mode (str): Run mode ('single', 'sequential', or 'parallel').
+        path (dict): Dictionary of paths.
+        local_path (str): Path to local directory.
+        sch_date (str): Schedule date.
+        sch_num (int): Schedule number.
+        vid_ext_raw (str): Raw video file extension.
+        vid_ext_proc (str): Processed video file extension.
+        mov_idx (int): Index of video in cat to process.
+        """
+    
+    # Create directory at local_path + proj_name if it does not exist
+    if not os.path.exists(local_path + os.sep + proj_name):
+        os.mkdir(local_path + os.sep + proj_name)
 
     # Extract experiment catalog info
-    cat = af.get_cat_info(path['cat'], include_mode='both', exclude_mode='calibration')
+    cat = af.get_cat_info(path['cat'], include_mode='make_video', exclude_mode='calibration')
 
-    # Return a version of cat for all matches of the sch_num column that matches sch_num
-    cat_curr = cat[cat['sch_num'] == sch_num]
-
-    # Get the mask
-    mask_filename = af.generate_filename(sch_date, sch_num, trial_num=None)
-    mask_path = path['mask'] + os.sep + mask_filename + '_mask.jpg'
-    im_mask, mask_perim = get_mask(mask_path)
-
-    # Get the mean image
-    mean_image_path = path['mean'] + os.sep + mask_filename + '_mean.jpg'
-    mean_image = cv2.imread(mean_image_path, cv2.IMREAD_UNCHANGED)
-
+    # Trim down cat for single mode
     if run_mode == 'single':
 
-        if mov_idx is None:
-            raise ValueError('mov_idx must be defined if run_mode is \'single\'.')
+        # Single video address in cat
+        cat = cat.iloc[[mov_idx]]
 
-        # Single video address in cat_curr
-        row = cat_curr.iloc[mov_idx]
-
-        # Paths for input and output videos
-        vid_path_in = vid_path + os.sep + row['video_filename'] + '.' + vid_ext_raw
-        vid_file_out = af.generate_filename(row['date'], row['sch_num'], trial_num=row['trial_num'])
-        vid_path_out = local_path + os.sep + vid_file_out + '.' + vid_ext_proc
-
-        # Set bounds of the area for blobs
-        min_area = int(row['min_area']/4)
-        max_area = int(10*row['max_area'])
-
-        print('Video in: '  + vid_path_in)
-        print('Video out: ' + vid_path_out)
-        status_txt = 'Trial ' + str(row['trial_num'])
-
-        # Generate and save binary movie
-        make_binary_movie(vid_path_in, vid_path_out, mean_image, row['threshold'], min_area, max_area, \
-                                im_mask=im_mask, mask_perim=mask_perim, im_crop=True, status_txt=status_txt, echo=True, blob_color='grayscale')
+    if (run_mode == 'sequential') or (run_mode == 'single'):
         
-    elif run_mode == 'sequential':
+        # Loop thru each row of cat
+        for index, row in cat.iterrows():
 
-        # Loop thru each row of cat_curr
-        for index, row in cat_curr.iterrows():
+            # Get schedule info
+            sch_date = row['date']
+            sch_num  = row['sch_num']
+
+            # Path to all videos for the current date
+            vid_path = path['vidin'] + os.sep +  sch_date
+
+            # Get the mask
+            mask_filename = af.generate_filename(sch_date, sch_num, trial_num=None)
+            mask_path = path['mask'] + os.sep + mask_filename + '_mask.jpg'
+            im_mask, mask_perim = get_mask(mask_path)
+
+            # Get the mean image
+            mean_image_path = path['mean'] + os.sep + mask_filename + '_mean.jpg'
+            mean_image = cv2.imread(mean_image_path, cv2.IMREAD_UNCHANGED)
 
             # Paths for input and output videos
             vid_path_in = vid_path + os.sep + row['video_filename'] + '.' + vid_ext_raw
             vid_file_out = af.generate_filename(row['date'], row['sch_num'], trial_num=row['trial_num'])
-            vid_path_out = local_path + os.sep + vid_file_out + '.' + vid_ext_proc
+            vid_path_out = local_path + os.sep + proj_name + os.sep + vid_file_out + '.' + vid_ext_proc 
 
             # Set bounds of the area for blobs
             min_area = int(row['min_area']/4)
@@ -86,12 +83,32 @@ def run_make_binary_videos(run_mode, path, local_path, sch_date, sch_num, vid_ex
         import concurrent.futures
         import time
 
+        # Define start time
+        start_time = time.time()
+
         # Define a function to process each row in parallel
         def process_row(row):
+
+             # Get schedule info
+            sch_date = row['date']
+            sch_num  = row['sch_num']
+
+            # Path to all videos for the current date
+            vid_path = path['vidin'] + os.sep +  sch_date
+
+             # Get the mask
+            mask_filename = af.generate_filename(sch_date, sch_num, trial_num=None)
+            mask_path = path['mask'] + os.sep + mask_filename + '_mask.jpg'
+            im_mask, mask_perim = get_mask(mask_path)
+
+            # Get the mean image
+            mean_image_path = path['mean'] + os.sep + mask_filename + '_mean.jpg'
+            mean_image = cv2.imread(mean_image_path, cv2.IMREAD_UNCHANGED)
+
             # Paths for input and output videos
             vid_path_in = vid_path + os.sep + row['video_filename'] + '.' + vid_ext_raw
             vid_file_out = af.generate_filename(row['date'], row['sch_num'], trial_num=row['trial_num'])
-            vid_path_out = local_path + os.sep + vid_file_out + '.' + vid_ext_proc
+            vid_path_out = local_path + os.sep + proj_name + os.sep + vid_file_out + '.' + vid_ext_proc 
 
             # Set bounds of the area for blobs
             min_area = int(row['min_area'] / 4)
@@ -105,8 +122,8 @@ def run_make_binary_videos(run_mode, path, local_path, sch_date, sch_num, vid_ex
 
         # Create a ThreadPoolExecutor to execute the iterations in parallel
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            # Loop thru each row of cat_curr and submit each iteration as a separate task
-            futures = [executor.submit(process_row, row) for _, row in cat_curr.iterrows()]
+            # Loop thru each row of cat and submit each iteration as a separate task
+            futures = [executor.submit(process_row, row) for _, row in cat.iterrows()]
 
             # Wait for all tasks to complete
             concurrent.futures.wait(futures)

@@ -72,7 +72,7 @@ def run_threshold_choice(path, sch_date, sch_num, analysis_schedule, vid_ext_raw
         print('Threshold and area values already exist in experiment_log.csv for the current date and schedule number.')
 
 
-def run_spatial_calibration(path, sch_date, sch_num, vid_ext_raw, analysis_schedule, font_size=40, overwrite_existing=False):
+def run_spatial_calibration(path, sch_date, sch_num, vid_ext_raw, analysis_schedule, num_reps=3, font_size=40, overwrite_existing=False):
     """ Runs the spatial calibration, if necessary.
     Args:
         path (dict): Dictionary of paths
@@ -125,7 +125,7 @@ def run_spatial_calibration(path, sch_date, sch_num, vid_ext_raw, analysis_sched
             raise ValueError('The calibration video does not exist in the video directory: ' + full_vid_path)
 
         # Run the spatial calibration
-        cm_per_pix = spatial_calibration(full_vid_path, reps=3, font_size=font_size)
+        cm_per_pix = spatial_calibration(full_vid_path, reps=num_reps, font_size=font_size)
 
         # Add cm_per_pix value to cat_raw.cm_per_pix where sch_num=sch_num
         cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == sch_num), 'cm_per_pix'] = cm_per_pix
