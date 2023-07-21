@@ -438,8 +438,10 @@ def get_mask(im_mask_path):
         perim (np.array): Perimeter of mask.
         """
 
-    # Read mask image
-    mask = cv2.imread(im_mask_path, cv2.IMREAD_GRAYSCALE)
+    # Read mask image and data
+    mask_img = cv2.imread(im_mask_path, cv2.IMREAD_GRAYSCALE)
+    mask_data = np.load(os.path.splitext(im_mask_path)[0] + ".npy")
+    mask = mask_data.reshape(mask_img.shape[0], mask_img.shape[1])
 
     # Threshold the mask
     mask = cv2.threshold(mask, 0, 255, cv2.THRESH_BINARY)[1]
@@ -658,6 +660,8 @@ def make_max_mean_image(cat_curr, sch, vid_path, max_num_frames, im_mask=None, m
 
     # Convert mean image to uint8
     mean_image = np.round(mean_image).astype(np.uint8)
+
+
 
     return mean_image
 

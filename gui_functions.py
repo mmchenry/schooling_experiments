@@ -592,6 +592,10 @@ def create_mask_for_batch(vid_file, mask_file):
     
     # Save the binary image
     cv2.imwrite(mask_file, binary_image)
+    binary_image_data = binary_image.ravel()
+
+    # Write the binary image data to a file
+    np.save(os.path.splitext(mask_file)[0] + ".npy", binary_image_data)
 
     print(' ')
     print('Mask saved to: ' + mask_file)
@@ -849,3 +853,10 @@ def interactive_blob_filter(im, im_mean, threshold):
 
     cv2.destroyAllWindows()
     return min_area, max_area
+
+def display_image(im):
+    # Display the binary image
+    create_cv_window('Image')
+    cv2.imshow('Image', im)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
