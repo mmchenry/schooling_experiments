@@ -58,7 +58,8 @@ def run_make_binary_videos(run_mode, path, local_path, proj_name, vid_ext_raw, v
 
             # Get the mean image
             mean_image_path = path['mean'] + os.sep + mask_filename + '_mean.jpg'
-            mean_image = cv2.imread(mean_image_path, cv2.IMREAD_UNCHANGED)
+            # mean_image = cv2.imread(mean_image_path, cv2.IMREAD_UNCHANGED)
+            mean_image = get_mean_image(mean_image_path)
 
             # Paths for input and output videos
             vid_path_in = vid_path + os.sep + row['video_filename'] + '.' + vid_ext_raw
@@ -168,7 +169,14 @@ def run_mean_image(path, sch_num, sch_date, analysis_schedule, max_num_frame_mea
 
         # Save the mean image
         mean_image_path = path['mean'] + os.sep + mask_filename + '_mean.jpg'
+        mean_image_data_path = path['mean'] + os.sep + mask_filename + '_mean.npy'
         cv2.imwrite(mean_image_path, mean_image)
+
+        # Flatten the grayscale mean image data
+        mean_image_data = mean_image.ravel()
+
+        # Write the grayscale mean image data
+        np.save(mean_image_data_path, mean_image_data)
 
     # If the mean image does exist, then read it
     else:
@@ -460,6 +468,24 @@ def get_mask(im_mask_path):
     return mask, perim
 
 
+def get_mean_image(im_mean_path):
+    """Return mask image from path.
+    Args:
+        im_mean_path (str): Path to mask image.
+    Returns:
+        mean_image (np.array): Mean image (uncompressed).
+        """
+
+    # Read mean image and data
+    mean_jpg = cv2.imread(im_mean_path, cv2.IMREAD_GRAYSCALE)
+    mean_data = np.load(os.path.splitext(im_mean_path)[0] + ".npy")
+
+    # Form data into the dimensions of the mean image
+    mean_image = mean_data.reshape(mean_jpg.shape[0], mean_jpg.shape[1])
+
+    return mean_image
+
+
 def read_frame(cap, idx, im_mask=None, mask_perim=None, im_crop=False, outside_clr='white', color_mode='grayscale'):
     """Return frame at index idx from video capture object. Also enhance if desired.
         args:
@@ -660,8 +686,6 @@ def make_max_mean_image(cat_curr, sch, vid_path, max_num_frames, im_mask=None, m
 
     # Convert mean image to uint8
     mean_image = np.round(mean_image).astype(np.uint8)
-
-
 
     return mean_image
 
