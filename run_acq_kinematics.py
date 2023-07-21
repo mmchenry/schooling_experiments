@@ -1,12 +1,9 @@
-#%%
-""" Parameters and packages 
-
-- You'll need to execute the next cell for all of the code that follows. 
-- Make sure that the root_path and local_path are correct for your system.
-- The root_path is the path to the folder containing the data, and video folders.
-- local_path needs to be a directory on a local drive for writing binary video files for TGrabs/TRex.
------------------------------------------------------------------------------------------------------
-"""
+#%% =================================================================================================
+""" Parameters and packages """
+# - You'll need to execute the next cell for all of the code that follows.
+# - Make sure that the root_path and local_path are correct for your system.
+#     - The root_path is the path to the folder containing the data, and video folders.
+# - local_path needs to be a directory on a local drive for writing binary video files for TGrabs/TRex.
 
 # The project name need to match a directory name within the root path
 proj_name = 'RN_Ramp_Debug'
@@ -80,15 +77,14 @@ elif not os.path.exists(local_path):
 path = dp.give_paths(root_path, proj_name)
 
 
-#%%
-""" Select schedule, check for problems in recordings
-Note: need to run this for cells below.
-Here we prompt the user to select which schedule to choose for preprocessing. Along the way, it checks for the following:
-- That the experiment_log.csv and recording_log.csv lists include all trials in the schedule.
-- Compares the schedules in the project against video recordings 
-- It compares the duration of recorded videos to what was expected in the schedule and alerts user of large differences.
------------------------------------------------------------------------------------------------------
-"""
+#%% =================================================================================================
+""" Select schedule, check for problems in recordings"""
+# Note: need to run this for cells below.
+#     Here we prompt the user to select which schedule to choose for preprocessing. Along the way, it checks for the following:
+#     - That the experiment_log.csv and recording_log.csv lists include all trials in the schedule.
+# - Compares the schedules in the project against video recordings
+# - It compares the duration of recorded videos to what was expected in the schedule and alerts user of large differences.
+
 # Find matching experiments between the schedule and video directories
 sch_num, sch_date, analysis_schedule = vp.find_schedule_matches(path['sch'], path['vidin'], font_size=30)
 
@@ -96,61 +92,54 @@ sch_num, sch_date, analysis_schedule = vp.find_schedule_matches(path['sch'], pat
 vp.check_logs(path, analysis_schedule, sch_num, sch_date, vid_ext_raw)
 
 
-#%%
-""" Create a mask image
-- You will want to choose a region of interest that is just outside of the water line within the arena.
------------------------------------------------------------------------------------------------------
-"""
+#%% =================================================================================================
+""" Create a mask image"""
+# - You will want to choose a region of interest that is just outside of the water line within the arena.
+
 gf.run_mask_acq(path, sch_date, sch_num, vid_ext_raw, analysis_schedule, overwrite_existing=True)
 
 
-#%%
-""" Run spatial calibration
-- Prompts user to conduct repeated measures for the calibration. Note that you need to know the actual length in centimeters.
------------------------------------------------------------------------------------------------------
-"""
+#%% =================================================================================================
+""" Run spatial calibration """
+# - Prompts user to conduct repeated measures for the calibration. Note that you need to know the actual length in centimeters.
+
 gf.run_spatial_calibration(path, sch_date, sch_num, vid_ext_raw, analysis_schedule, num_reps, font_size=40,
                            overwrite_existing=True)
 
 
-#%%
-""" Create mean image
-- A mean image is created from multiple videos in the batch.
------------------------------------------------------------------------------------------------------
-"""
+#%% =================================================================================================
+""" Create mean image"""
+# - A mean image is created from multiple videos in the batch.
+
 vp.run_mean_image(path, sch_num, sch_date, analysis_schedule, max_num_frame_meanimage, overwrite_existing=True)
 
 
-#%%
-""" Select threshold and blob area
-- Select the lowest threshold possible, without the margins of each fish looking fuzzy
-- Select the range of areas that just barely include individual fish. Exclude fish that are touching area other.
------------------------------------------------------------------------------------------------------
-"""
+#%% =================================================================================================
+""" Select threshold and blob area"""
+# - Select the lowest threshold possible, without the margins of each fish looking fuzzy
+# - Select the range of areas that just barely include individual fish. Exclude fish that are touching area other.
+
 gf.run_threshold_choice(path, sch_date, sch_num, analysis_schedule, vid_ext_raw,  overwrite_existing=True)
 
 
-#%%
-""" Generate binary videos
-- Here we use the threshold and area values to generate black-and-white images of the school.
-- This can be performed on a single video, all videos in a schedule in succession, or using parallel processing 
-(the fastest option).
------------------------------------------------------------------------------------------------------
-"""
+#%% =================================================================================================
+""" Generate binary videos """
+# - Here we use the threshold and area values to generate black-and-white images of the school.
+# - This can be performed on a single video, all videos in a schedule in succession, or using parallel processing
+# (the fastest option).
+
 run_mode = 'parallel' # May be single, sequential, or parallel
 vp.run_make_binary_videos(run_mode, path, local_path, proj_name, vid_ext_raw, vid_ext_proc, mov_idx=0)
 
 
-#%%
-""" TGrabs/TRex Parameters
+#%% =================================================================================================
+""" TGrabs/TRex Parameters """
+# - Parameters are described in the documentation for [TGrabs](https://trex.run/docs/parameters_tgrabs.html) and
+# [TRex](https://trex.run/docs/parameters_trex.html).
+# - These lists of parameters will be passed to TGrabs and TRex. If there is not already a column for that parameter,
+#     then it will be added to cat (i.e. experiment_log.csv) with the default values specified below.
+# Those defaults may be overridden by keying values into experiment_log.csv.
 
-- Parameters are described in the documentation for [TGrabs](https://trex.run/docs/parameters_tgrabs.html) and 
-[TRex](https://trex.run/docs/parameters_trex.html).
-- These lists of parameters will be passed to TGrabs and TRex. If there is not already a column for that parameter, 
-then it will be added to cat (i.e. experiment_log.csv) with the default values specified below. 
-Those defaults may be overridden by keying values into experiment_log.csv.
------------------------------------------------------------------------------------------------------
-"""
 # Parameter list to use by TGrabs, along with default
 param_list_tgrabs = [
     #['threshold','20'],
@@ -188,33 +177,30 @@ cat_to_trex = [
 af.add_param_vals(path['cat'], param_list_tgrabs, param_list_trex)
 
 
-#%%
-""" Run TGrabs
-- TGrabs generates pv video files from raw videos for TRex tracking.
-- Cell below generates dv videos, which will be used by TRex, from compressed videos.
-- This will be completed for each row of cat.
------------------------------------------------------------------------------------------------------
-"""
+#%% =================================================================================================
+""" Run TGrabs"""
+# - TGrabs generates pv video files from raw videos for TRex tracking.
+#     - Cell below generates dv videos, which will be used by TRex, from compressed videos.
+# - This will be completed for each row of cat.
+
 # Run TGrabs, or formulate the command-line terminal commands
 commands = af.run_tgrabs(path['cat'], path['data_raw'], local_path + os.sep + proj_name, path['vidpv'],
                          param_list_tgrabs, vid_ext_proc=vid_ext_proc, use_settings_file=False, run_gui=True,
                          echo=True, run_command=True)
 
 
-#%%
-""" Run TRex
-- Uses the parameter names given in param_list_trex and cat_to_trex to generate the command-line terminal commands to run TRex.
------------------------------------------------------------------------------------------------------
-"""
+#%% =================================================================================================
+""" Run TRex """
+# - Uses the parameter names given in param_list_trex and cat_to_trex to generate the command-line terminal commands to run TRex.
+
 # Run TRex, or formulate the command-line terminal commands
 commands = af.run_trex(path['cat'], path['vidpv'], path['data_raw'], param_list_trex, cat_to_trex, run_gui=False,
                        output_posture=True, echo=True, run_command=True)
 
 
-#%%
-""" Export TRex data in mat format
------------------------------------------------------------------------------------------------------
-"""
+#%% =================================================================================================
+""" Export TRex data in mat format"""
+
 # Extract experiment catalog info
 cat = af.get_cat_info(path['cat'], include_mode='matlab', exclude_mode='calibration')
 
@@ -222,9 +208,8 @@ cat = af.get_cat_info(path['cat'], include_mode='matlab', exclude_mode='calibrat
 da.raw_to_mat(cat, path)
 
 
-#%%
-""" Housecleaning
------------------------------------------------------------------------------------------------------
-"""
+#%% =================================================================================================
+""" Housecleaning """
+
 # Delete the local binary videos that match the pv videos
 af.delete_matching_files(local_path, path['vidpv'])
