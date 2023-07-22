@@ -542,7 +542,7 @@ def run_tgrabs(cat_path, raw_path, vid_path_in, vid_path_out,  param_list_tgrabs
     return commands
 
 def run_trex(cat_path, vid_path, data_path, param_list_trex, cat_to_trex, use_settings_file=False, output_posture=True,
-             echo=True, run_gui=True, run_command=True, settings_path=None):
+             echo=True, run_gui=True, auto_quit=False, run_command=True, settings_path=None):
     """ Runs TRex on all videos listed in the catalog file
     Args:
         cat_path (str): Path to catalog file
@@ -610,7 +610,14 @@ def run_trex(cat_path, vid_path, data_path, param_list_trex, cat_to_trex, use_se
             # Whether to launch gui
             if run_gui:
                 command += '-nowindow false '
-                command += '-auto_quit false '
+                
+                # Whether to auto_quit when launching qui (useful for observation)
+                if auto_quit:
+                    command += '-auto_quit true '
+                else:    
+                    command += '-auto_quit false '
+
+
             else:
                 command += '-nowindow true '
                 command += '-auto_quit true '
@@ -618,7 +625,7 @@ def run_trex(cat_path, vid_path, data_path, param_list_trex, cat_to_trex, use_se
             if output_posture:
                 command += '-output_posture_data true '
             else:
-                command += '-output_posture_data false '
+                command += '-output_posture_data false '    
 
             # Add additional default parameters
             command += '-fishdata_dir \'trex_fishdata\' '
