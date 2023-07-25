@@ -58,7 +58,6 @@ def run_make_binary_videos(run_mode, path, local_path, proj_name, vid_ext_raw, v
 
             # Get the mean image
             mean_image_path = path['mean'] + os.sep + mask_filename + '_mean.jpg'
-            # mean_image = cv2.imread(mean_image_path, cv2.IMREAD_UNCHANGED)
             mean_image = get_mean_image(mean_image_path)
 
             # Paths for input and output videos

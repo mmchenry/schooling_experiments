@@ -9,6 +9,9 @@
 proj_name = 'RN_Ramp_Debug'
 # proj_name = 'RN_Prop'
 
+# This specifies whether the mask is specific to a trial (True) or the same for all trials (False)
+trial_specific_mask = True
+
 # Other details about the project
 species = 'rummy_nose'
 exp_type = 'prop_neo'
@@ -96,7 +99,8 @@ vp.check_logs(path, analysis_schedule, sch_num, sch_date, vid_ext_raw)
 """ Create a mask image"""
 # - You will want to choose a region of interest that is just outside of the water line within the arena.
 
-gf.run_mask_acq(path, sch_date, sch_num, vid_ext_raw, analysis_schedule, overwrite_existing=True)
+gf.run_mask_acq(path, sch_date, sch_num, vid_ext_raw, analysis_schedule, overwrite_existing=True, 
+                trial_specific_mask=trial_specific_mask)
 
 
 #%% =================================================================================================
@@ -128,7 +132,7 @@ gf.run_threshold_choice(path, sch_date, sch_num, analysis_schedule, vid_ext_raw,
 # - This can be performed on a single video, all videos in a schedule in succession, or using parallel processing
 # (the fastest option).
 
-run_mode = 'parallel' # May be single, sequential, or parallel
+run_mode = 'sequential' # May be single, sequential, or parallel
 vp.run_make_binary_videos(run_mode, path, local_path, proj_name, vid_ext_raw, vid_ext_proc, mov_idx=0)
 
 

@@ -145,7 +145,8 @@ def run_spatial_calibration(path, sch_date, sch_num, vid_ext_raw, analysis_sched
         print('cm_per_pix values already exist in experiment_log.csv for the current date and schedule number.')
 
 
-def run_mask_acq(path, sch_date, sch_num, vid_ext_raw, analysis_schedule, overwrite_existing=False):
+def run_mask_acq(path, sch_date, sch_num, vid_ext_raw, analysis_schedule, overwrite_existing=False, 
+                 trial_specific_mask=False):
     """ Runs the mask acquisition of the mask image, if necessary.
     Args:
         path (dict): Dictionary of paths
@@ -153,6 +154,7 @@ def run_mask_acq(path, sch_date, sch_num, vid_ext_raw, analysis_schedule, overwr
         sch_num (int): Schedule number
         vid_ext_raw (str): Video file extension
         analysis_schedule (str): Analysis schedule
+        trial_specific_mask (bool): If True, then a mask is acquired for each trial.
     """
 
      # Get schedule data
@@ -161,51 +163,61 @@ def run_mask_acq(path, sch_date, sch_num, vid_ext_raw, analysis_schedule, overwr
     # Extract experiment catalog info
     cat = af.get_cat_info(path['cat'], include_mode='both', exclude_mode='calibration')
 
+    # Read the full cat file
+    cat_raw = pd.read_csv(path['cat'])
+
      # Path to all videos for the current date
     vid_path = path['vidin'] + os.sep +  sch_date
 
      # Flag any large differences in video duration from experiment log, return list of videos to be processed
     vid_files = vp.check_video_duration(vid_path, sch, cat, vid_ext=vid_ext_raw, thresh_time=3.0)
 
-    # Define the mask filename
-    mask_filename = af.generate_filename(sch_date, sch_num, trial_num=None)
-    mask_path = path['mask'] + os.sep + mask_filename + '_mask.jpg'
+    # Loop thru each video listed in cat, extract row 
+    for index, row in cat.iterrows():
 
-    # If the mask file does not exist, then create it
-    if (not os.path.exists(mask_path)) or overwrite_existing:
-        centroid = create_mask_for_batch(vid_path+os.sep+vid_files[0], mask_path)
-    else:
-        print(' ')
-        print('Mask file and roi already exists. Using existing mask file: ' + mask_path)   
+        if (index==0) or (trial_specific_mask is True):
+            # Define the mask filename
+            mask_filename = af.generate_filename(sch_date, sch_num, trial_num=row.trial_num)
+            mask_path = path['mask'] + os.sep + mask_filename + '_mask.jpg'
 
-    # Read the full cat file
-    cat_raw = pd.read_csv(path['cat'])
+            # If the mask file does not exist, then create it
+            if (not os.path.exists(mask_path)) or overwrite_existing:
+                print(' ')
+                centroid = create_mask_for_batch(vid_path+os.sep+vid_files[0], mask_path)
+            else:
+                print(' ')
+                print('Mask file and roi already exists. Using existing mask file: ' + mask_path)   
 
-    # Get the size of the cat_raw
-    cat_raw_size = cat_raw.shape
+        # Store mask_filename in cat_raw
+        if (not os.path.exists(mask_path)) or overwrite_existing:
+            cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == sch_num) & (cat_raw['trial_num'] == row.trial_num), 'mask_filename'] = mask_filename
 
-    # Determine if roi centroid values already exists in cat_raw where date==sch_date and sch_num==sch_num
-    roi_x_exists = cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == sch_num), 'roi_x'].values
-    roi_y_exists = cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == sch_num), 'roi_y'].values
+    # Save cat_raw (i.e., experiment_log.csv)
+    cat_raw.to_csv(path['cat'], index=False)
+    
 
-    # If there are any missing roi values . . .
-    if (roi_x_exists.size==0) or max(np.isnan(roi_x_exists)):
-        # Find video_filename for calibration from cat_raw: where the date matches sch_date and the sch_num is 999
-        cal_video_filename = cat_raw[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == 999)]['video_filename'].values
+        # # Determine if roi centroid values already exists in cat_raw where date==sch_date and sch_num==sch_num
+        # roi_x_exists = cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == sch_num), 'roi_x'].values
+        # roi_y_exists = cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == sch_num), 'roi_y'].values
 
-        # Add roi centroid value to cat_raw.roi_x and cat_raw.roi_y where sch_num=sch_num
-        cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == sch_num), 'roi_x'] = centroid[0]
-        cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == sch_num), 'roi_y'] = centroid[1]
+        # # If there are any missing roi values . . .
+        # if (roi_x_exists.size==0) or max(np.isnan(roi_x_exists)):
+        #     # Find video_filename for calibration from cat_raw: where the date matches sch_date and the sch_num is 999
+        #     cal_video_filename = cat_raw[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == 999)]['video_filename'].values
 
-        # Write cat_raw, if it has the same dimensions, or one new column
-        if (cat_raw.shape[0] == cat_raw_size[0]) and \
-            (cat_raw.shape[1] == cat_raw_size[1]):
-            cat_raw.to_csv(path['cat'], index=False)
-            print(' ')
-            print('Added roi centroid values to experiment_log.csv')
-        else:
-            # raise exception
-            raise ValueError('cat_raw has the wrong dimensions-- cannot write the roi centroid data to experiment_log')
+        #     # Add roi centroid value to cat_raw.roi_x and cat_raw.roi_y where sch_num=sch_num
+        #     cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == sch_num), 'roi_x'] = centroid[0]
+        #     cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == sch_num), 'roi_y'] = centroid[1]
+
+        #     # Write cat_raw, if it has the same dimensions, or one new column
+        #     if (cat_raw.shape[0] == cat_raw_size[0]) and \
+        #         (cat_raw.shape[1] == cat_raw_size[1]):
+        #         cat_raw.to_csv(path['cat'], index=False)
+        #         print(' ')
+        #         print('Added roi centroid values to experiment_log.csv')
+        #     else:
+        #         # raise exception
+        #         raise ValueError('cat_raw has the wrong dimensions-- cannot write the roi centroid data to experiment_log')
     
 
 # The following is used to generate GUIs
@@ -592,6 +604,8 @@ def create_mask_for_batch(vid_file, mask_file):
     
     # Save the binary image
     cv2.imwrite(mask_file, binary_image)
+
+    # Flatten the binary image data
     binary_image_data = binary_image.ravel()
 
     # Write the binary image data to a file
