@@ -6,7 +6,7 @@
 # - local_path needs to be a directory on a local drive for writing binary video files for TGrabs/TRex.
 
 # The project name need to match a directory name within the root path
-proj_name = 'RN_Ramp_Debug'
+proj_name = 'RN_Scale'
 # proj_name = 'RN_Prop'
 
 # This specifies whether the mask is specific to a trial (True) or the same for all trials (False)
@@ -14,7 +14,7 @@ trial_specific_mask = True
 
 # Other details about the project
 species = 'rummy_nose'
-exp_type = 'prop_neo'
+exp_type = 'scaling'
 
 # font size for GUIs
 font_size = 30
@@ -93,6 +93,10 @@ sch_num, sch_date, analysis_schedule = vp.find_schedule_matches(path['sch'], pat
 
 # Check that the schedule matches the catalog and the catalog matches the experiment log. Also check that the video files exist. Add timecode data.
 vp.check_logs(path, analysis_schedule, sch_num, sch_date, vid_ext_raw)
+
+#%% 
+# This cell left empty on purpose
+
 
 
 #%% =================================================================================================
@@ -199,8 +203,8 @@ commands = af.run_tgrabs(path['cat'], path['data_raw'], local_path + os.sep + pr
 # - Uses the parameter names given in param_list_trex and cat_to_trex to generate the command-line terminal commands to run TRex.
 
 # Run TRex, or formulate the command-line terminal commands
-commands = af.run_trex(path['cat'], path['vidpv'], path['data_raw'], param_list_trex, cat_to_trex, run_gui=False,
-                       output_posture=True, echo=True, run_command=True)
+commands = af.run_trex(path['cat'], path['vidpv'], path['data_raw'], param_list_trex, cat_to_trex,
+                run_gui=True, auto_quit=True, output_posture=True, echo=True, run_command=True)
 
 
 #%% =================================================================================================
