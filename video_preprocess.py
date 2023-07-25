@@ -7,7 +7,7 @@ import cv2
 import numpy as np
 import pandas as pd
 import acqfunctions as af
-# import subprocess
+import def_acquisition as da
 import gui_functions as gf
 import time
 import sys
@@ -136,7 +136,8 @@ def run_make_binary_videos(run_mode, path, local_path, proj_name, vid_ext_raw, v
         raise ValueError('run_mode must be \'single\', \'sequential\', or \'parallel\'.')
     
 
-def run_mean_image(path, sch_num, sch_date, analysis_schedule, max_num_frame_meanimage=200, font_size=30, overwrite_existing=False):
+def run_mean_image(path, sch_num, sch_date, analysis_schedule, max_num_frame_meanimage=200, 
+                   font_size=30, overwrite_existing=False, trial_specific_mean=False, show_image=True):
 
     # Get schedule data
     sch = pd.read_csv(path['sch'] + os.sep + analysis_schedule + '.csv')
@@ -149,44 +150,64 @@ def run_mean_image(path, sch_num, sch_date, analysis_schedule, max_num_frame_mea
 
      # Path to all videos for the current date
     vid_path = path['vidin'] + os.sep +  sch_date
-    
-    # Define the mask filename
-    mask_filename = af.generate_filename(sch_date, sch_num, trial_num=None)
-    mask_path = path['mask'] + os.sep + mask_filename + '_mask.jpg'
 
-    # Mean image path
-    mean_image_path = path['mean'] + os.sep + mask_filename + '_mean.jpg'
+    # Use first row of cat, if we need only one mean image for the schedule
+    if trial_specific_mean is False:
+        
+        # Single video address in cat
+        cat_curr = cat_curr.iloc[[0]]
 
-    # If the mean image does not exist, then create it
-    if (not os.path.exists(mean_image_path)) or overwrite_existing:
+    # Loop thru each video listed in cat_curr, extract row 
+    for index, row in cat_curr.iterrows():
 
-        # Find the mask
-        im_mask, mask_perim = get_mask(mask_path)
+        # Define the mask filename (use same as mask filename)
+        # mask_filename = af.generate_filename(sch_date, sch_num, trial_num=None)
+        mask_path = path['mask'] + os.sep + row.mask_filename + '_mask.jpg'
 
-        # Make mean image
-        mean_image = make_max_mean_image(cat_curr, sch, vid_path, max_num_frame_meanimage, im_mask=im_mask, mask_perim=mask_perim, im_crop=True)
+        # Mean image path
+        mean_image_path = path['mean'] + os.sep + row.mask_filename + '_mean.jpg'
 
-        # Save the mean image
-        mean_image_path = path['mean'] + os.sep + mask_filename + '_mean.jpg'
-        mean_image_data_path = path['mean'] + os.sep + mask_filename + '_mean.npy'
-        cv2.imwrite(mean_image_path, mean_image)
+        # If the mean image does not exist, then create it
+        if (not os.path.exists(mean_image_path)) or overwrite_existing:
+            
+            # Use only the cat row that matches the current trial number, if we need a mean image for each trial
+            if trial_specific_mean is True:
+                cat_curr = cat[(cat['sch_num'] == sch_num) & (cat['trial_num'] == row.trial_num)]
 
-        # Flatten the grayscale mean image data
-        mean_image_data = mean_image.ravel()
+                # Define a version of sch that only includes the current trial number
+                sch_curr = sch[sch['trial_num'] == row.trial_num]
+            else:
+                sch_curr = sch
 
-        # Write the grayscale mean image data
-        np.save(mean_image_data_path, mean_image_data)
+            # Find the mask
+            im_mask, mask_perim = get_mask(mask_path)
 
-    # If the mean image does exist, then read it
-    else:
-        # Read the mean image
-        mean_image = cv2.imread(mean_image_path, cv2.IMREAD_UNCHANGED)
+            # Make mean image
+            mean_image = make_max_mean_image(cat_curr, sch_curr, vid_path, max_num_frame_meanimage, 
+                                             im_mask=im_mask, mask_perim=mask_perim, im_crop=True)
 
-    # Display the binary image
-    gf.create_cv_window('Mean image')
-    cv2.imshow('Mean image', mean_image)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+            # Save the mean image
+            mean_image_path = path['mean'] + os.sep + row.mask_filename + '_mean.jpg'
+            mean_image_data_path = path['mean'] + os.sep + row.mask_filename + '_mean.npy'
+            cv2.imwrite(mean_image_path, mean_image)       
+
+            # Flatten the grayscale mean image data
+            mean_image_data = mean_image.ravel()
+
+            # Write the grayscale mean image data
+            np.save(mean_image_data_path, mean_image_data)
+
+        # If the mean image does exist, then read it
+        else:
+            # Read the mean image
+            mean_image = cv2.imread(mean_image_path, cv2.IMREAD_UNCHANGED)
+
+        # Display the binary image
+        if show_image:
+            gf.create_cv_window('Mean image')
+            cv2.imshow('Mean image', mean_image)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
 
 
 def find_schedule_matches(csv_dir, match_dir, font_size=30):
@@ -576,7 +597,8 @@ def read_frame(cap, idx, im_mask=None, mask_perim=None, im_crop=False, outside_c
     return frame
 
 
-def make_max_mean_image(cat_curr, sch, vid_path, max_num_frames, im_mask=None, mask_perim=None, im_crop=False, vid_ext_raw='MOV'):
+def make_max_mean_image(cat_curr, sch, vid_path, max_num_frames, im_mask=None, mask_perim=None, im_crop=False, 
+                        vid_ext_raw='MOV'):
     """Create a mean image from a video capture object. Selects frames from movies where the light is set at maximum intensity for the batch.
         args:
             cat_cur: Subset of experiment_log to be included in mean image
@@ -589,6 +611,10 @@ def make_max_mean_image(cat_curr, sch, vid_path, max_num_frames, im_mask=None, m
             vid_ext_raw: File extension of raw video
         returns:
             mean_image: Mean image"""
+
+    # Reset indicies
+    cat_curr.reset_index(drop=True, inplace=True)
+    sch.reset_index(drop=True, inplace=True)
 
     # Find the maximum value among light_start, light_end, and light_return, and light_btwn in sch
     max_light = max(sch['light_start'].max(), sch['light_end'].max(), sch['light_return'].max())
@@ -609,13 +635,16 @@ def make_max_mean_image(cat_curr, sch, vid_path, max_num_frames, im_mask=None, m
     # make new a pandas dataframe that lists the video_filename from cat_curr, but only for the rows for light_start_max or light_end_max or light_return_max
     # and only for the columns 'video_filename', 'light_start', 'light_end', 'light_return', 'light_btwn'
     data = {'vid_files': cat_curr.loc[:, 'video_filename'].values,
-            'start_startime':np.nan,
+            'start_starttime':np.nan,
             'start_endtime':np.nan,
             'end_starttime':np.nan,
             'end_endtime':np.nan,
             'return_starttime':np.nan,
             'return_endtime':np.nan}
     df = pd.DataFrame(data=data)
+
+    # Reset indicies
+    df.reset_index(drop=True, inplace=True)
 
     # Add the start and end times to the dataframe for times where light is at max
     df.loc[light_start_max, 'start_starttime']    = start_starttime[light_start_max]
@@ -658,7 +687,7 @@ def make_max_mean_image(cat_curr, sch, vid_path, max_num_frames, im_mask=None, m
             frame_nums = np.append(frame_nums, np.arange(int(return_start*fps)+1, int(return_end*fps)-1, frames_per_vid))
 
         # Randomly select frames_per_vid frames from the frames array
-        frame_nums = np.random.choice(frame_nums, frames_per_vid, replace=False)
+        frame_nums = np.random.choice(frame_nums, frames_per_vid, replace=True)
 
         # Loop through the frame_nums array
         for frame_num in frame_nums:

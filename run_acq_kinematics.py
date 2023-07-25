@@ -97,7 +97,7 @@ vp.check_logs(path, analysis_schedule, sch_num, sch_date, vid_ext_raw)
 
 #%% =================================================================================================
 """ Create a mask image"""
-# - You will want to choose a region of interest that is just outside of the water line within the arena.
+# You will want to choose a region of interest that is just outside of the water line within the arena.
 
 gf.run_mask_acq(path, sch_date, sch_num, vid_ext_raw, analysis_schedule, overwrite_existing=True, 
                 trial_specific_mask=trial_specific_mask)
@@ -105,7 +105,7 @@ gf.run_mask_acq(path, sch_date, sch_num, vid_ext_raw, analysis_schedule, overwri
 
 #%% =================================================================================================
 """ Run spatial calibration """
-# - Prompts user to conduct repeated measures for the calibration. Note that you need to know the actual length in centimeters.
+# Prompts user to conduct repeated measures for the calibration. Note that you need to know the actual length in centimeters.
 
 gf.run_spatial_calibration(path, sch_date, sch_num, vid_ext_raw, analysis_schedule, num_reps, font_size=40,
                            overwrite_existing=True)
@@ -113,9 +113,10 @@ gf.run_spatial_calibration(path, sch_date, sch_num, vid_ext_raw, analysis_schedu
 
 #%% =================================================================================================
 """ Create mean image"""
-# - A mean image is created from multiple videos in the batch.
+# A mean image is created from multiple videos in the batch.
 
-vp.run_mean_image(path, sch_num, sch_date, analysis_schedule, max_num_frame_meanimage, overwrite_existing=True)
+vp.run_mean_image(path, sch_num, sch_date, analysis_schedule, max_num_frame_meanimage, overwrite_existing=True,
+                  trial_specific_mean=trial_specific_mask, show_image=False)
 
 
 #%% =================================================================================================
