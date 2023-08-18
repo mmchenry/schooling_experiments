@@ -847,7 +847,7 @@ def interactive_blob_filter(im, im_mean, threshold):
 
     # Create trackbars
     cv2.createTrackbar('Min Area', win_name, initial_min_area, 600, on_min_area_change)
-    cv2.createTrackbar('Max Area', win_name, initial_max_area, 600, on_max_area_change)
+    cv2.createTrackbar('Max Area', win_name, initial_max_area, 3000, on_max_area_change)
 
     # Apply initial blob filtering to the image
     filtered_im = vp.filter_blobs(im, im_mean, threshold, initial_min_area, initial_max_area)
