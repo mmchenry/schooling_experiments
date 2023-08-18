@@ -10,7 +10,7 @@ proj_name = 'RN_Scale'
 # proj_name = 'RN_Prop'
 
 # This specifies whether the mask is specific to a trial (True) or the same for all trials (False)
-trial_specific_mask = True
+trial_specific_mask = False
 
 # Other details about the project
 species = 'rummy_nose'
