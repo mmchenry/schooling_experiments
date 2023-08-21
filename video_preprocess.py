@@ -152,10 +152,10 @@ def run_mean_image(path, sch_num, sch_date, analysis_schedule, max_num_frame_mea
     vid_path = path['vidin'] + os.sep +  sch_date
 
     # Use first row of cat, if we need only one mean image for the schedule
-    if trial_specific_mean is False:
+    # if trial_specific_mean is False:
         
-        # Single video address in cat
-        cat_curr = cat_curr.iloc[[0]]
+    #     # Single video address in cat
+    #     cat_curr = cat_curr.iloc[[0]]
 
     # Loop thru each video listed in cat_curr, extract row 
     for index, row in cat_curr.iterrows():
@@ -664,8 +664,17 @@ def make_max_mean_image(cat_curr, sch, vid_path, max_num_frames, im_mask=None, m
     for idx, vid_file in enumerate(df['vid_files'].values):
 
         full_path = os.path.join(vid_path, vid_file + '.' + vid_ext_raw)
+
+        # Check that the video file exists
+        if not os.path.exists(full_path):
+            raise ValueError('Video file does not exist: ' + full_path)
+
         vid = cv2.VideoCapture(full_path)
         fps = vid.get(cv2.CAP_PROP_FPS)
+
+        # raise an error if fps==0
+        if fps == 0:
+            fps = cat_curr['frame_rate'].values[idx]
 
         # Get the start and end times for the current video that are not nan values
         start_start  = df.loc[idx, 'start_starttime']
@@ -685,6 +694,10 @@ def make_max_mean_image(cat_curr, sch, vid_path, max_num_frames, im_mask=None, m
 
         if not np.isnan(return_start):
             frame_nums = np.append(frame_nums, np.arange(int(return_start*fps)+1, int(return_end*fps)-1, frames_per_vid))
+
+        # raise an error if frame_nums is empty
+        if frame_nums.size == 0:
+            raise ValueError('frame_nums is empty.')
 
         # Randomly select frames_per_vid frames from the frames array
         frame_nums = np.random.choice(frame_nums, frames_per_vid, replace=True)

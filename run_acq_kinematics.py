@@ -6,7 +6,7 @@
 # - local_path needs to be a directory on a local drive for writing binary video files for TGrabs/TRex.
 
 # The project name need to match a directory name within the root path
-proj_name = 'RN_Scale'
+proj_name = 'BS_Basic'
 # proj_name = 'RN_Prop'
 
 # This specifies whether the mask is specific to a trial (True) or the same for all trials (False)
