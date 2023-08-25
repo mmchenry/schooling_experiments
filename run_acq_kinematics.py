@@ -6,8 +6,8 @@
 # - local_path needs to be a directory on a local drive for writing binary video files for TGrabs/TRex.
 
 # The project name need to match a directory name within the root path
-proj_name = 'BS_Basic'
-# proj_name = 'RN_Prop'
+# proj_name = 'BS_Basic'
+proj_name = 'RN_Scale'
 
 # This specifies whether the mask is specific to a trial (True) or the same for all trials (False)
 trial_specific_mask = False
@@ -210,11 +210,15 @@ commands = af.run_trex(path['cat'], path['vidpv'], path['data_raw'], param_list_
 #%% =================================================================================================
 """ Export TRex data in mat format"""
 
+# Export periphery coordinates of the masks to mat files
+da.process_masks(path['mask'])
+
 # Extract experiment catalog info
 cat = af.get_cat_info(path['cat'], include_mode='matlab', exclude_mode='calibration')
 
 # Convert all npz files for an experiment to mat files.
 da.raw_to_mat(cat, path)
+
 
 
 #%% =================================================================================================

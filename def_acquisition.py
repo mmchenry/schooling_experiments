@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import os
 import cv2 as cv
+import video_preprocess as vp
 # import def_definepaths as dd
 
 
@@ -198,3 +199,48 @@ def generate_filename(date, sch_num, trial_num=None):
         return date + '_sch' + str(int(sch_num)).zfill(3)
     else:
         return date + '_sch' + str(int(sch_num)).zfill(3) + '_tr' + str(int(trial_num)).zfill(3)
+    
+
+
+def process_masks(npy_path):
+    """
+    Process npy files, find periphery coordinates of white blobs, and save to .mat files.
+    
+    Parameters:
+        npy_path (str): Path to the directory containing npy files.
+    """
+
+    from scipy.io import savemat
+
+    # Listing of all files with mask data
+    npy_files = [file for file in os.listdir(npy_path) if file.endswith('.npy')]
+    
+    # Loop thru each file
+    for npy_file in npy_files:
+
+        # Define matlab file
+        mat_file = npy_file.replace('.npy', '.mat')
+
+        # Define jpg file
+        jpg_file = npy_file.replace('.npy', '.jpg')
+        
+        # If mat file does not already exists
+        if mat_file not in os.listdir(npy_path):
+
+            # Read mean image and data
+            # mean_jpg  = cv2.imread(os.path.join(npy_path, jpg_file), cv2.IMREAD_GRAYSCALE)
+            # mean_data = np.load(os.path.join(npy_path, npy_file))
+
+            # Form data into the dimensions of the mean image
+            # im_mask = mean_data.reshape(mean_jpg.shape[0], mean_jpg.shape[1])            
+                
+            # Get the mask
+            # npy_data = np.load(os.path.join(npy_path, npy_file))
+            im_mask, perim_mask = vp.get_mask(os.path.join(npy_path, jpg_file)) 
+            
+            # contours, _ = cv2.findContours(im_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            # periphery_coords = contours[0][:, 0, :].tolist()
+            
+            savemat(os.path.join(npy_path, mat_file), {'perim_coords': perim_mask})
+
+
