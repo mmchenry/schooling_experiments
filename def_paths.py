@@ -40,7 +40,7 @@ def give_paths(root_path, proj_name):
 
         if ans:
             # Create the project folders
-            os.mkdir(video_path)
+            os.mkdir(vid_path)
         else:
             # Exit the function
             return None
