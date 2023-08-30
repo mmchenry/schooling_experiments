@@ -40,7 +40,7 @@ def give_paths(root_path, proj_name):
 
         if ans:
             # Create the project folders
-            os.mkdir(video_path)
+            os.mkdir(vid_path)
         else:
             # Exit the function
             return None
@@ -123,7 +123,7 @@ def give_paths(root_path, proj_name):
                                     'exp_type','neo_treat','fish_num',
                                     'video_filename',
                                     'analyze','make_video','run_tgrabs','run_trex','run_matlab',
-                                    'cal_video_filename','cm_per_pix',
+                                    'cm_per_pix', 'timecode_start',
                                     'threshold','min_area','max_area',
                                     'Notes'])
         cat.to_csv(paths['cat'], index=False)

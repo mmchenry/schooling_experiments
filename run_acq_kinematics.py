@@ -7,14 +7,16 @@
 
 # The project name need to match a directory name within the root path
 # proj_name = 'BS_Basic'
-proj_name = 'RN_Scale'
+#proj_name = 'RN_Scale'
+proj_name = 'RN_Prop'
+
 
 # This specifies whether the mask is specific to a trial (True) or the same for all trials (False)
-trial_specific_mask = False
+trial_specific_mask = True
 
 # Other details about the project
 species = 'rummy_nose'
-exp_type = 'scaling'
+exp_type = 'prop_neo'
 
 # font size for GUIs
 font_size = 30
@@ -59,6 +61,12 @@ elif (platform.system() == 'Linux') and (os.path.expanduser('~')=='/home/anpetey
 
     root_path = '/vortex/schooling/TRex'
     local_path = '/home/anpetey/Documents/wake_tracking/video/binary'
+    
+# Ashley's Laptop (google drive)    
+elif (platform.system() == 'Windows') and (os.path.expanduser('~')=='C:\\Users\\anpet'):
+
+    root_path = 'G:\Shared drives\Schooling Behavior\TRex'
+    local_path = 'C:\\Users\\anpet\\Documents\\Work\\TRex\\video\\binary'
 
 # Catch alternatives
 else:
@@ -115,8 +123,7 @@ gf.run_mask_acq(path, sch_date, sch_num, vid_ext_raw, analysis_schedule, overwri
 """ Run spatial calibration """
 # Prompts user to conduct repeated measures for the calibration. Note that you need to know the actual length in centimeters.
 
-gf.run_spatial_calibration(path, sch_date, sch_num, vid_ext_raw, analysis_schedule, num_reps, font_size=40,
-                           overwrite_existing=True)
+gf.run_spatial_calibration(path, sch_date, sch_num, vid_ext_raw, analysis_schedule, num_reps, font_size=40, overwrite_existing=True)
 
 
 #%% =================================================================================================
@@ -221,7 +228,7 @@ da.process_masks(path['mask'])
 cat = af.get_cat_info(path['cat'], include_mode='matlab', exclude_mode='calibration')
 
 # Convert all npz files for an experiment to mat files.
-da.raw_to_mat(cat, path)
+#da.raw_to_mat(cat, path)
 
 
 
