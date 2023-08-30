@@ -79,6 +79,9 @@ elif not os.path.exists(local_path):
 # Get paths 
 path = dp.give_paths(root_path, proj_name)
 
+# Listing of column names that should start cat
+fixed_columns = ['date','sch_num','trial_num','school_id','fish_num','exp_type','analyze','make_video','run_tgrabs','run_trex','run_matlab']
+
 
 #%% =================================================================================================
 """ Select schedule, check for problems in recordings"""
@@ -92,7 +95,8 @@ path = dp.give_paths(root_path, proj_name)
 sch_num, sch_date, analysis_schedule = vp.find_schedule_matches(path['sch'], path['vidin'], font_size=30)
 
 # Check that the schedule matches the catalog and the catalog matches the experiment log. Also check that the video files exist. Add timecode data.
-vp.check_logs(path, analysis_schedule, sch_num, sch_date, vid_ext_raw)
+vp.check_logs(path, analysis_schedule, sch_num, sch_date, vid_ext_raw,fixed_columns=fixed_columns)
+
 
 #%% 
 # This cell left empty on purpose

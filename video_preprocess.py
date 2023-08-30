@@ -262,7 +262,7 @@ def find_schedule_matches(csv_dir, match_dir, font_size=30):
     return sch_num, sch_date, analysis_schedule
 
 
-def check_logs(path, analysis_schedule, sch_num, sch_date, vid_ext_raw):
+def check_logs(path, analysis_schedule, sch_num, sch_date, vid_ext_raw,fixed_columns=None):
     """ Check that the schedule matches the catalog and the catalog matches the experiment log. Also check that the video files exist. Add timecode data experiment_log.csv if it does not exist.
     Args:
         path (dict): Dictionary of paths.
@@ -277,7 +277,7 @@ def check_logs(path, analysis_schedule, sch_num, sch_date, vid_ext_raw):
     sch = pd.read_csv(path['sch'] + os.sep + analysis_schedule + '.csv')
 
     # Extract experiment catalog info
-    cat = af.get_cat_info(path['cat'], include_mode='both', exclude_mode='calibration')
+    cat = af.get_cat_info(path['cat'], include_mode='both', exclude_mode='calibration',fixed_columns=fixed_columns)
     if len(cat) == 0:
         raise ValueError('No videos requested to work on from experiment_log.' + \
                         ' Both the columns \'analyze\' and \'make_video\' must be' + \
@@ -1013,3 +1013,4 @@ def display_image(im):
     cv2.imshow('Image', im)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
+

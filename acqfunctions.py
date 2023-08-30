@@ -24,7 +24,7 @@ def generate_filename(date, sch_num, trial_num=None):
         return date + '_sch' + str(int(sch_num)).zfill(3) + '_tr' + str(int(trial_num)).zfill(3)
 
 
-def get_cat_info(cat_path, include_mode='both', exclude_mode='calibration'):
+def get_cat_info(cat_path, include_mode='both', exclude_mode='calibration',fixed_columns=None):
     """ Extracts key parameters from experiment catalog for making videos from image sequence.
     Videos included are the ones where analyze==1 and make_video==1.
 
@@ -33,6 +33,7 @@ def get_cat_info(cat_path, include_mode='both', exclude_mode='calibration'):
     cat_path:  Full path to video catalog (CSV file)
     include_mode: Criteria for what to include. Can be 'analyze', 'make_video', 'both', 'tgrabs', or 'trex'
     exclude_mode: Criteria for what to exclude. Can be 'calibration' or None
+    fix_columns: Listing of column names to include at the start of the dataframe.
 
     """
 
@@ -41,6 +42,20 @@ def get_cat_info(cat_path, include_mode='both', exclude_mode='calibration'):
 
     # Import CSV data
     d = pd.read_csv(file)
+
+    # If fixed_columns are provided, reorder columns
+    if fixed_columns is not None:
+
+        # Sort order of non-fixed columns
+        # sorted_columns = sorted([col for col in d.columns if col not in fixed_columns])
+        sorted_columns = sorted([col for col in d.columns if col not in fixed_columns], key=str.casefold)
+
+
+        # Reorder columns
+        d = d[fixed_columns + sorted_columns]
+
+        # Write d to file
+        d.to_csv(cat_path, index=False)
 
     # Determine which rows to include
     if include_mode=='both':
