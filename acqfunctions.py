@@ -24,7 +24,7 @@ def generate_filename(date, sch_num, trial_num=None):
         return date + '_sch' + str(int(sch_num)).zfill(3) + '_tr' + str(int(trial_num)).zfill(3)
 
 
-def get_cat_info(cat_path, include_mode='both', exclude_mode='calibration',fixed_columns=None):
+def get_cat_info(cat_path, include_mode='all', exclude_mode=None, fixed_columns=None):
     """ Extracts key parameters from experiment catalog for making videos from image sequence.
     Videos included are the ones where analyze==1 and make_video==1.
 
@@ -75,6 +75,9 @@ def get_cat_info(cat_path, include_mode='both', exclude_mode='calibration',fixed
 
     elif include_mode=='matlab':
         d = d.loc[(d.run_matlab == 1)]
+    
+    elif include_mode == 'all':
+        d = d
 
     # Determine which rows to exclude
     if exclude_mode == 'calibration':
@@ -402,7 +405,7 @@ def make_calibration_images(path, vid_ext_raw='MOV', vid_ext_mask='mp4', vid_qua
         else:
             print('Video frame saved to: ' + im_path)
 
-def add_param_vals(cat_path, param_list_tgrabs, param_list_trex):
+def add_param_vals(cat_path, param_list_tgrabs, param_list_trex,fixed_columns=None):
     """ Adds parameter values to the catalog file
     Args:
         cat_path (str): Path to catalog file
@@ -429,10 +432,16 @@ def add_param_vals(cat_path, param_list_tgrabs, param_list_trex):
         if param_val[0] not in cat.columns:
             cat[param_val[0]] = str(param_val[1])
 
+        # For each row where run_tgrabs==1, set the value of the parameter to the value in param_list_tgrabs
+        cat.loc[cat.run_tgrabs==1, param_val[0]] = param_val[1]
+
     # Loop through each item in param_list_tgrabs and add a column to cat, if it does not exist
     for param_val in param_list_trex:
         if param_val[0] not in cat.columns:
             cat[param_val[0]] = str(param_val[1])
+        
+        # For each row where run_tgrabs==1, set the value of the parameter to the value in param_list_tgrabs
+        cat.loc[cat.run_trex==1, param_val[0]] = param_val[1]
 
     # Check if cat_start and cat are the same
     if cat_start.equals(cat):
@@ -441,6 +450,9 @@ def add_param_vals(cat_path, param_list_tgrabs, param_list_trex):
         # Save the cat file
         cat.to_csv(cat_path, index=False)
         print('Updated default values to cat file: ' + cat_path)
+
+    # Reread cat to save sorted columns
+    cat = get_cat_info(cat_path, include_mode='all', exclude_mode=None, fixed_columns=fixed_columns)
 
 
 def run_tgrabs(cat_path, raw_path, vid_path_in, vid_path_out,  param_list_tgrabs, vid_ext_proc='mp4', use_settings_file=False,

@@ -8,7 +8,8 @@
 # The project name need to match a directory name within the root path
 # proj_name = 'BS_Basic'
 #proj_name = 'RN_Scale'
-proj_name = 'RN_Prop'
+# proj_name = 'RN_Prop'
+proj_name = 'RN_Ramp_Debug'
 
 
 # This specifies whether the mask is specific to a trial (True) or the same for all trials (False)
@@ -194,7 +195,7 @@ cat_to_trex = [
     ]
 
 # Add default parameter values to all rows
-af.add_param_vals(path['cat'], param_list_tgrabs, param_list_trex)
+af.add_param_vals(path['cat'], param_list_tgrabs, param_list_trex, fixed_columns=fixed_columns)
 
 
 #%% =================================================================================================
