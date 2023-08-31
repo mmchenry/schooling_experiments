@@ -177,7 +177,11 @@ def run_mask_acq(path, sch_date, sch_num, vid_ext_raw, analysis_schedule, overwr
 
         if (index==0) or (trial_specific_mask is True):
             # Define the mask filename
-            mask_filename = af.generate_filename(sch_date, sch_num, trial_num=row.trial_num)
+            if trial_specific_mask is True:             
+                mask_filename = af.generate_filename(sch_date, sch_num, trial_num=row.trial_num)
+            else:
+                mask_filename = af.generate_filename(sch_date, sch_num)
+
             mask_path = path['mask'] + os.sep + mask_filename + '_mask.jpg'
 
             # If the mask file does not exist, then create it
