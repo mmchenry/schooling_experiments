@@ -7,13 +7,13 @@
 
 # The project name need to match a directory name within the root path
 # proj_name = 'BS_Basic'
-#proj_name = 'RN_Scale'
+proj_name = 'RN_Scale'
 # proj_name = 'RN_Prop'
-proj_name = 'RN_Ramp_Debug'
+# proj_name = 'RN_Ramp'
 
 
 # This specifies whether the mask is specific to a trial (True) or the same for all trials (False)
-trial_specific_mask = True
+trial_specific_mask = False
 
 # Other details about the project
 species = 'rummy_nose'
@@ -225,8 +225,9 @@ commands = af.run_trex(path['cat'], path['vidpv'], path['data_raw'], param_list_
 # Export periphery coordinates of the masks to mat files
 da.process_masks(path['mask'])
 
-# Extract experiment catalog info
-cat = af.get_cat_info(path['cat'], include_mode='matlab', exclude_mode='calibration')
+# Extract experiment catalog info (run again here to reformat the data)
+cat = af.get_cat_info(path['cat'], include_mode='matlab', exclude_mode='calibration',
+                      fixed_columns=fixed_columns)
 
 # Convert all npz files for an experiment to mat files.
 #da.raw_to_mat(cat, path)

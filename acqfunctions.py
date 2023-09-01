@@ -43,13 +43,34 @@ def get_cat_info(cat_path, include_mode='all', exclude_mode=None, fixed_columns=
     # Import CSV data
     d = pd.read_csv(file)
 
+    change_maskname = False
+
+    # Remove characters '_mask' or '.jpg' from mask_filename
+    for i in d.index:
+        entry = d.loc[i, 'mask_filename']
+        
+        if isinstance(entry, str):
+            if '_mask' in entry:
+                d.loc[i, 'mask_filename'] = entry.replace('_mask', '')
+                entry = d.loc[i, 'mask_filename']
+                change_maskname = True
+            if '.jpg' in entry:
+                d.loc[i, 'mask_filename'] = entry.replace('.jpg', '')
+                change_maskname = True
+        elif np.isnan(entry):
+            continue
+    
+    if change_maskname:
+         # Write d to file
+        d.to_csv(cat_path, index=False)
+        print('Some of the mask filenames have been updated to experiment_log.csv')
+
     # If fixed_columns are provided, reorder columns
     if fixed_columns is not None:
 
         # Sort order of non-fixed columns
         # sorted_columns = sorted([col for col in d.columns if col not in fixed_columns])
         sorted_columns = sorted([col for col in d.columns if col not in fixed_columns], key=str.casefold)
-
 
         # Reorder columns
         d = d[fixed_columns + sorted_columns]
