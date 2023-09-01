@@ -229,8 +229,11 @@ da.process_masks(path['mask'])
 cat = af.get_cat_info(path['cat'], include_mode='matlab', exclude_mode='calibration',
                       fixed_columns=fixed_columns)
 
-# Convert all npz files for an experiment to mat files.
-#da.raw_to_mat(cat, path)
+
+#%% =================================================================================================
+""" Convert all npz files for an experiment to mat files."""
+
+da.raw_to_mat(cat, path)
 
 
 
