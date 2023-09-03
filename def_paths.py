@@ -1,7 +1,9 @@
 import os
 import pandas as pd
 import tkinter as tk
-import screeninfo
+import platform
+if not (platform.system() == 'Darwin'):
+    import screeninfo
 import platform
 
 
@@ -41,9 +43,9 @@ def give_paths(root_path, proj_name):
         if ans:
             # Create the project folders
             os.mkdir(vid_path)
-        else:
-            # Exit the function
-            return None
+        # else:
+        #     # Exit the function
+        #     return None
 
     # Directory structure wrt root folders
     paths = {

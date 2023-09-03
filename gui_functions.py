@@ -1,5 +1,8 @@
 import tkinter as tk
-import screeninfo
+import platform
+if not (platform.system() == 'Darwin'):
+    import screeninfo
+    from shapely.geometry import Polygon
 import os
 import video_preprocess as vp
 import cv2
@@ -7,7 +10,7 @@ import numpy as np
 import pandas as pd
 from scipy.interpolate import splprep, splev
 import math
-from shapely.geometry import Polygon
+
 import acqfunctions as af
 
 
