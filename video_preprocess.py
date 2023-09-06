@@ -636,7 +636,8 @@ def make_max_mean_image(cat_curr, sch, vid_path, max_num_frames, im_mask=None, m
 
     # Combine data from both dataframes based on 'trial_num'
     # combined_df = pd.merge(sch, cat_curr, on='trial_num', how='outer')
-    both_df = pd.merge(sch, cat_curr[['trial_num', 'video_filename','frame_rate']], on='trial_num', how='left')
+    # both_df = pd.merge(sch, cat_curr[['trial_num', 'video_filename','frame_rate']], on='trial_num', how='left')
+    both_df = pd.merge(sch, cat_curr[['trial_num', 'video_filename', 'frame_rate']], on='trial_num', how='inner')
 
     # Remove source dataframes
     del cat_curr, sch
