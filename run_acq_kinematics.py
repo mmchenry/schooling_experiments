@@ -7,7 +7,7 @@
 
 # The project name need to match a directory name within the root path
 # proj_name = 'BS_Basic'
-proj_name = 'RN_Scale'
+proj_name = 'PT_basic'
 # proj_name = 'RN_Prop'
 # proj_name = 'RN_Ramp'
 
@@ -49,6 +49,7 @@ import gui_functions as gf
 if (platform.system() == 'Darwin') and (os.path.expanduser('~')=='/Users/mmchenry'):
     
     root_path = '/Users/mmchenry/Documents/Projects/waketracking'
+    local_path = root_path
 
 # Matt on PopOS! machine
 elif (platform.system() == 'Linux') and (os.path.expanduser('~')=='/home/mmchenry'):
