@@ -613,6 +613,9 @@ def make_max_mean_image(cat_curr, sch, vid_path, max_num_frames, im_mask=None, m
             mean_image: Mean image"""
 
 
+    # Number of frame to clip from consideration at the end of a video
+    num_frames_trim = 120
+
     # Sort both dataframes by 'trial_num'
     sch.sort_values('trial_num', inplace=True)
     cat_curr.sort_values('trial_num', inplace=True)
@@ -717,7 +720,7 @@ def make_max_mean_image(cat_curr, sch, vid_path, max_num_frames, im_mask=None, m
             frame_nums = np.append(frame_nums, np.arange(int(end_start*fps)+1, int(end_endframe*fps)-1, frames_per_vid))
 
         if not np.isnan(return_start):
-            frame_nums = np.append(frame_nums, np.arange(int(return_start*fps)+1, int(return_end*fps)-1, frames_per_vid))
+            frame_nums = np.append(frame_nums, np.arange(int(return_start*fps)+1, int(return_end*fps)-num_frames_trim, frames_per_vid))
 
         if np.max(frame_nums) > total_frames:
             raise ValueError('The maximum frame number is greater than the total number of frames in the video.')
