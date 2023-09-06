@@ -671,6 +671,8 @@ def make_max_mean_image(cat_curr, sch, vid_path, max_num_frames, im_mask=None, m
 
         vid = cv2.VideoCapture(full_path)
         fps = vid.get(cv2.CAP_PROP_FPS)
+        total_frames = int(vid.get(cv2.CAP_PROP_FRAME_COUNT))
+        # total_time = total_frames/fps
 
         # raise an error if fps==0
         if fps == 0:
@@ -694,6 +696,9 @@ def make_max_mean_image(cat_curr, sch, vid_path, max_num_frames, im_mask=None, m
 
         if not np.isnan(return_start):
             frame_nums = np.append(frame_nums, np.arange(int(return_start*fps)+1, int(return_end*fps)-1, frames_per_vid))
+
+        if np.max(frame_nums) > total_frames:
+            raise ValueError('The maximum frame number is greater than the total number of frames in the video.')
 
         # raise an error if frame_nums is empty
         if frame_nums.size == 0:

@@ -43,6 +43,10 @@ def get_cat_info(cat_path, include_mode='all', exclude_mode=None, fixed_columns=
     # Import CSV data
     d = pd.read_csv(file)
 
+    # Raise error if d is empty
+    if len(d) == 0:
+        raise ValueError('No trial data found in experiment_log.csv.')
+
     change_maskname = False
 
     # Remove characters '_mask' or '.jpg' from mask_filename
@@ -71,7 +75,7 @@ def get_cat_info(cat_path, include_mode='all', exclude_mode=None, fixed_columns=
         # Sort order of non-fixed columns
         # sorted_columns = sorted([col for col in d.columns if col not in fixed_columns])
         sorted_columns = sorted([col for col in d.columns if col not in fixed_columns], key=str.casefold)
-
+        
         # Reorder columns
         d = d[fixed_columns + sorted_columns]
 
