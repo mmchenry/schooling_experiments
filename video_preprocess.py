@@ -715,16 +715,18 @@ def make_max_mean_image(cat_curr, sch, vid_path, max_num_frames, im_mask=None, m
         # Collect frame numbers for snippets at max light intensity, for current video
         frame_nums = np.array([])
         if not np.isnan(start_start):
-            frame_nums = np.append(frame_nums, np.arange(int(start_start*fps)+1, int(start_end*fps)-1, frames_per_vid))
+            frame_nums = np.append(frame_nums, np.linspace(int(start_start*fps)+1, int(start_end*fps)-1, frames_per_vid))
 
         if not np.isnan(end_start):
-            frame_nums = np.append(frame_nums, np.arange(int(end_start*fps)+1, int(end_endframe*fps)-1, frames_per_vid))
+            frame_nums = np.append(frame_nums, np.linspace(int(end_start*fps)+1, int(end_endframe*fps)-1, frames_per_vid))
 
         if not np.isnan(return_start):
-            frame_nums = np.append(frame_nums, np.arange(int(return_start*fps)+1, int(return_end*fps)-num_frames_trim, frames_per_vid))
+            frame_nums = np.append(frame_nums, np.linspace(int(return_start*fps)+1, int(return_end*fps)-num_frames_trim, frames_per_vid))
 
         if np.max(frame_nums) > total_frames:
-            raise ValueError('The maximum frame number is greater than the total number of frames in the video.')
+            idx_good = frame_nums<total_frames
+            frame_nums = frame_nums[idx_good]
+            print('Warning: The maximum frame number is greater than the total number of frames in the video.')
 
         # raise an error if frame_nums is empty
         if frame_nums.size == 0:
