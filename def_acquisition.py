@@ -215,6 +215,10 @@ def process_masks(npy_path):
     # Listing of all files with mask data
     npy_files = [file for file in os.listdir(npy_path) if file.endswith('.npy')]
     
+    # Give warning if no files found
+    if len(npy_files) == 0:
+        print('WARNING: No npy files found in: ' + npy_path)
+        
     # Loop thru each file
     for npy_file in npy_files:
 
