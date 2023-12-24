@@ -7,9 +7,9 @@
 
 # The project name need to match a directory name within the root path
 # proj_name = 'BS_Basic'
-proj_name = 'PT_basic'
+# proj_name = 'PT_basic'
 # proj_name = 'RN_Prop'
-# proj_name = 'RN_Ramp'
+proj_name = 'RN_Ramp'
 
 
 # This specifies whether the mask is specific to a trial (True) or the same for all trials (False)
@@ -106,11 +106,6 @@ sch_num, sch_date, analysis_schedule = vp.find_schedule_matches(path['sch'], pat
 
 # Check that the schedule matches the catalog and the catalog matches the experiment log. Also check that the video files exist. Add timecode data.
 vp.check_logs(path, analysis_schedule, sch_num, sch_date, vid_ext_raw,fixed_columns=fixed_columns)
-
-
-#%% 
-# This cell left empty on purpose
-
 
 
 #%% =================================================================================================

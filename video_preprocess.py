@@ -612,29 +612,55 @@ def make_max_mean_image(cat_curr, sch, vid_path, max_num_frames, im_mask=None, m
         returns:
             mean_image: Mean image"""
 
+
+    # Number of frame to clip from consideration at the end of a video
+    num_frames_trim = 120
+
+    # Sort both dataframes by 'trial_num'
+    sch.sort_values('trial_num', inplace=True)
+    cat_curr.sort_values('trial_num', inplace=True)
+
     # Reset indicies
     cat_curr.reset_index(drop=True, inplace=True)
     sch.reset_index(drop=True, inplace=True)
 
-    # Find the maximum value among light_start, light_end, and light_return, and light_btwn in sch
-    max_light = max(sch['light_start'].max(), sch['light_end'].max(), sch['light_return'].max())
+    # Find missing 'trial_num' in both dataframes
+    missing_in_sch = set(cat_curr['trial_num']) - set(sch['trial_num'])
+    missing_in_cat_curr = set(sch['trial_num']) - set(cat_curr['trial_num'])
+
+    # Issue warnings for missing 'trial_num'
+    if missing_in_sch:
+        print(f"Warning: Missing trials in 'sch' dataframe: {sorted(list(missing_in_sch))}")
+    if missing_in_cat_curr:
+        print(f"Warning: Missing trials in 'cat_curr' dataframe: {sorted(list(missing_in_cat_curr))}")
+
+    # Combine data from both dataframes based on 'trial_num'
+    # combined_df = pd.merge(sch, cat_curr, on='trial_num', how='outer')
+    # both_df = pd.merge(sch, cat_curr[['trial_num', 'video_filename','frame_rate']], on='trial_num', how='left')
+    both_df = pd.merge(sch, cat_curr[['trial_num', 'video_filename', 'frame_rate']], on='trial_num', how='inner')
+
+    # Remove source dataframes
+    del cat_curr, sch
+
+    # Find the maximum value among light_start, light_end, and light_return, and light_btwn in both_df
+    max_light = max(both_df['light_start'].max(), both_df['light_end'].max(), both_df['light_return'].max())
 
     # Find values of light_start that equal max_light
-    light_start_max  = sch['light_start'] == max_light
-    light_end_max    = sch['light_end'] == max_light
-    light_return_max = sch['light_return'] == max_light
+    light_start_max  = both_df['light_start'] == max_light
+    light_end_max    = both_df['light_end'] == max_light
+    light_return_max = both_df['light_return'] == max_light
 
     # Calculate the starting and ending times for each light_start, light_end, and light_return
-    start_starttime  = np.zeros(sch.shape[0])
-    start_endtime    = start_starttime + 60*sch['start_dur_min'].values
-    end_starttime    = start_endtime + sch['ramp_dur_sec'].values
-    end_endtime      = end_starttime + 60*sch['end_dur_min'].values
-    return_starttime = end_endtime + sch['ramp2_dur_sec'].values
-    return_endtime   = return_starttime + 60*sch['return_dur_min'].values
+    start_starttime  = np.zeros(both_df.shape[0])
+    start_endtime    = start_starttime      + 60*both_df['start_dur_min'].values
+    end_starttime    = start_endtime        + both_df['ramp_dur_sec'].values
+    end_endtime      = end_starttime        + 60*both_df['end_dur_min'].values
+    return_starttime = end_endtime          + both_df['ramp2_dur_sec'].values
+    return_endtime   = return_starttime     + 60*both_df['return_dur_min'].values
 
     # make new a pandas dataframe that lists the video_filename from cat_curr, but only for the rows for light_start_max or light_end_max or light_return_max
     # and only for the columns 'video_filename', 'light_start', 'light_end', 'light_return', 'light_btwn'
-    data = {'vid_files': cat_curr.loc[:, 'video_filename'].values,
+    data = {'vid_files': both_df.loc[:, 'video_filename'].values,
             'start_starttime':np.nan,
             'start_endtime':np.nan,
             'end_starttime':np.nan,
@@ -647,7 +673,7 @@ def make_max_mean_image(cat_curr, sch, vid_path, max_num_frames, im_mask=None, m
     df.reset_index(drop=True, inplace=True)
 
     # Add the start and end times to the dataframe for times where light is at max
-    df.loc[light_start_max, 'start_starttime']    = start_starttime[light_start_max]
+    df.loc[light_start_max, 'start_starttime']   = start_starttime[light_start_max]
     df.loc[light_start_max, 'start_endtime']     = start_endtime[light_start_max]
     df.loc[light_end_max, 'end_starttime']       = end_starttime[light_end_max]
     df.loc[light_end_max, 'end_endtime']         = end_endtime[light_end_max]
@@ -671,10 +697,12 @@ def make_max_mean_image(cat_curr, sch, vid_path, max_num_frames, im_mask=None, m
 
         vid = cv2.VideoCapture(full_path)
         fps = vid.get(cv2.CAP_PROP_FPS)
+        total_frames = int(vid.get(cv2.CAP_PROP_FRAME_COUNT))
+        # total_time = total_frames/fps
 
         # raise an error if fps==0
         if fps == 0:
-            fps = cat_curr['frame_rate'].values[idx]
+            fps = both_df['frame_rate'].values[idx]
 
         # Get the start and end times for the current video that are not nan values
         start_start  = df.loc[idx, 'start_starttime']
@@ -687,13 +715,18 @@ def make_max_mean_image(cat_curr, sch, vid_path, max_num_frames, im_mask=None, m
         # Collect frame numbers for snippets at max light intensity, for current video
         frame_nums = np.array([])
         if not np.isnan(start_start):
-            frame_nums = np.append(frame_nums, np.arange(int(start_start*fps)+1, int(start_end*fps)-1, frames_per_vid))
+            frame_nums = np.append(frame_nums, np.linspace(int(start_start*fps)+1, int(start_end*fps)-1, frames_per_vid))
 
         if not np.isnan(end_start):
-            frame_nums = np.append(frame_nums, np.arange(int(end_start*fps)+1, int(end_endframe*fps)-1, frames_per_vid))
+            frame_nums = np.append(frame_nums, np.linspace(int(end_start*fps)+1, int(end_endframe*fps)-1, frames_per_vid))
 
         if not np.isnan(return_start):
-            frame_nums = np.append(frame_nums, np.arange(int(return_start*fps)+1, int(return_end*fps)-1, frames_per_vid))
+            frame_nums = np.append(frame_nums, np.linspace(int(return_start*fps)+1, int(return_end*fps)-num_frames_trim, frames_per_vid))
+
+        if np.max(frame_nums) > total_frames:
+            idx_good = frame_nums<total_frames
+            frame_nums = frame_nums[idx_good]
+            print('Warning: The maximum frame number is greater than the total number of frames in the video.')
 
         # raise an error if frame_nums is empty
         if frame_nums.size == 0:
