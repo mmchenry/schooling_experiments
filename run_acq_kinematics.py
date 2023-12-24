@@ -228,13 +228,10 @@ cat = af.get_cat_info(path['cat'], include_mode='matlab', exclude_mode='calibrat
 
 #%% =================================================================================================
 """ Convert all npz files for an experiment to mat files."""
-
 da.raw_to_mat(cat, path)
-
 
 
 #%% =================================================================================================
 """ Housecleaning """
-
 # Delete the local binary videos that match the pv videos
 af.delete_matching_files(local_path, path['vidpv'])
