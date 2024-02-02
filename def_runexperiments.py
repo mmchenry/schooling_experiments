@@ -10,6 +10,7 @@ import plotly.express as px
 import os
 import datetime as dt
 import glob
+import requests
 
 # To control the smart switch
 # import asyncio
@@ -186,8 +187,8 @@ def make_schedule(schedule_path, change_var=None, light_start=0.5, light_end=Non
     return filename
 
 
-def run_experiment_schedule(dmx, aud_path, log_path, schedule_path, LED_IP=None, movie_prefix=None, 
-                            control_hw=True, scene_num=1, shot_num=1, take_num_start=1):
+def run_experiment_schedule(dmx, aud_path, log_path, schedule_path, movie_prefix=None, 
+                            control_hw=True, scene_num=1, shot_num=1, take_num_start=1, camera_ip=None):
     """ 
     Runs a schedule of experiments using the run_program function.
     dmx            - specifies the hardware address for the Enttex device
@@ -320,23 +321,20 @@ def run_experiment_schedule(dmx, aud_path, log_path, schedule_path, LED_IP=None,
 
         # Run pre-experiment ramp (not logged)
         run_program(dmx, aud_path, light_level=[light_btwn, light_start], light_dur=None, ramp_dur=pre_dur, 
-            log_path=None, trig_video=False, echo=False, plot_data=False, movie_prefix=movie_prefix, LED_IP=LED_IP, 
-            analyze_prompt=False, control_hw=control_hw, sch_num=sch_num, trial_num=trial)
+            log_path=None, trig_video=False, echo=False, plot_data=False, movie_prefix=movie_prefix, control_hw=control_hw, sch_num=sch_num, trial_num=trial, camera_ip=camera_ip)
 
         # Run experiment (logged)
         run_program(dmx, aud_path, light_level=[light_start, light_end, light_return], light_dur=[start_dur, end_dur, return_dur], 
-            ramp_dur=[ramp_dur, ramp2_dur], log_path=log_path, trig_video=True, echo=False, plot_data=False, movie_prefix=movie_prefix, LED_IP=LED_IP, analyze_prompt=False, control_hw=control_hw, scene_num=scene_num, shot_num=shot_num, take_num=take_num, sch_num=sch_num, trial_num=trial)
+            ramp_dur=[ramp_dur, ramp2_dur], log_path=log_path, trig_video=True, echo=False, plot_data=False, movie_prefix=movie_prefix, control_hw=control_hw, scene_num=scene_num, shot_num=shot_num, take_num=take_num, sch_num=sch_num, trial_num=trial, camera_ip=camera_ip)
 
         if light_return==None:
         # Run post-experiment ramp (not logged)
             run_program(dmx, aud_path, light_level=[light_end, light_btwn], light_dur=None, ramp_dur=post_dur, 
-                log_path=None, trig_video=False, echo=False, plot_data=False, movie_prefix=movie_prefix, LED_IP=LED_IP, 
-                analyze_prompt=False, control_hw=control_hw, sch_num=sch_num, trial_num=trial)
+                log_path=None, trig_video=False, echo=False, plot_data=False, movie_prefix=movie_prefix, control_hw=control_hw, sch_num=sch_num, trial_num=trial, camera_ip=camera_ip)
         else:
             # Run post-experiment ramp (not logged)
             run_program(dmx, aud_path, light_level=[light_return, light_btwn], light_dur=None, ramp_dur=post_dur, 
-                log_path=None, trig_video=False, echo=False, plot_data=False, movie_prefix=movie_prefix, LED_IP=LED_IP, 
-                analyze_prompt=False, control_hw=control_hw, sch_num=sch_num, trial_num=trial)
+                log_path=None, trig_video=False, echo=False, plot_data=False, movie_prefix=movie_prefix, control_hw=control_hw, sch_num=sch_num, trial_num=trial, camera_ip=camera_ip)
         
         # Advance take number
         take_num = take_num + 1
@@ -353,10 +351,38 @@ def run_experiment_schedule(dmx, aud_path, log_path, schedule_path, LED_IP=None,
 
     return
 
+def control_zcam(camera_ip, command):
+    """
+    Controls the ZCam via HTTP commands. Assumes Ethernet connection between ZCam and computer.
+    camera_ip - IP address of the ZCam
+    command   - 'start' or 'stop' recording
+    """
+
+    if command == 'start':
+        url = f"http://{camera_ip}/ctrl/rec?action=start"
+    elif command == 'stop':
+        url = f"http://{camera_ip}/ctrl/rec?action=stop"
+    else:
+        raise ValueError("Do not recognize command: " + command)
+    
+    # Send request
+    response = requests.get(url)
+    
+    # Report response
+    if response.status_code == 200:
+        data = response.json()
+        if data['code'] == 0:
+            print("ZCam successfully executed command: " + command)
+        else:
+            print(f"Failed to execute command (" + command + ") to ZCam. Response: {data}")
+    else:
+        print(f"Error: {response.status_code}")
+
+
 
 def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_path=None, trig_video=True, 
-        echo=False, plot_data=True, movie_prefix=None, LED_IP=None, analyze_prompt=False, control_hw=True, 
-        scene_num=1, shot_num=1, take_num=1, sch_num=999, trial_num=0):
+        echo=False, plot_data=True, movie_prefix=None, control_hw=True, scene_num=1, shot_num=1, take_num=1, 
+        sch_num=999, trial_num=0, camera_ip=None):
     """ 
     Transmits signal to control light intensity via Enttex DMX USB Pro.
     dmx            - specifies the hardware address for the Enttex device
@@ -369,8 +395,6 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
     echo           - Whether to report status througout time series
     plot_data      - whether to plot the desired timing of light changes
     movie_prefix   - text at the start of the video filenames
-    LED_IP         - IP address of smart switch to be controlled 
-    analyze_prompt - Whether to ask whether to prompt to log the experiment (Default False)
     control_hw     - Whether to control the hardware (if False, just logs the experiment)
     scene_num      - Scene number for video filename
     shot_num       - Shot number for video filename
@@ -382,7 +406,7 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
     # Audio control described here:
     # https://stackoverflow.com/questions/57158779/how-to-stop-audio-with-playsound-module
 
-    if control_hw:
+    if control_hw and (aud_path!=None):
         import multiprocess
         from playsound import playsound
 
@@ -391,12 +415,8 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
         raise OSError("log_path not found at " + log_path)
 
     # Check for audio file
-    if control_hw and (not os.path.isfile(aud_path)):
+    if control_hw and (aud_path!=None) and (not os.path.isfile(aud_path)):
         raise OSError("aud_path not found at " + aud_path)
-
-    # check if ramp_dur is an array
-   # if (ramp_dur is not None) &  ~np.isscalar(ramp_dur):
-       # ramp_dur = ramp_dur[0]
 
     # Dataframe of light and control levels 
     df = make_ramp(light_level, light_dur, ramp_dur, plot_data=plot_data)
@@ -421,13 +441,6 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
         if not np.isnan(iLog):
             prev_date = log.date[iLog]
 
-       
-        # # Previous take number + 1 to new filename, if prev filename is not a nan
-        # if np.isnan(iLog) or pd.isnull(log.video_filename[iLog]):
-        #     prev_take = int(take_num) - 1
-        # else:
-        #     prev_take = int(log.video_filename[iLog][-3:])
-
     # Timer starts
     starttime_str = now.strftime("%H:%M:%S")
     start_time = time.time()
@@ -438,10 +451,15 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
     if log_path!=None:
         print("Starting trial {} at {}".format(trial_num, starttime_str)) 
 
-    if control_hw and trig_video:
+    # Start timecode audio signal
+    if control_hw and trig_video and (aud_path!=None):
         p = multiprocess.Process(target=playsound, args=(aud_path, ))
         print('    Starting audio to trigger video recording')
         p.start()
+
+    # Start video recording on ZCam
+    elif control_hw and (camera_ip!=None):
+        control_zcam(camera_ip, 'start')
 
     # Send data to dmx in loop until time runs out
     while curr_time<end_time:          
@@ -464,22 +482,13 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
         time.sleep(0.001)
         
     # End timecode audio signal
-    if control_hw and trig_video:
+    if control_hw and trig_video and (aud_path!=None):
         p.terminate()
         print('    Timecode audio ended.')
 
-    # Get info about the video filename
-  #  if (log_path!=None):
-
-        
-        # Prompt for filename numbers
-       # if analyze_prompt:
-
-          ##  scene_num, shot_num, take_num = input(prompt_txt).split()
-
-        # # Otherwise, generate them
-        # else:
-        #     take_num = prev_take + 1   
+    # End video recording on ZCam
+    elif control_hw and (camera_ip!=None):
+        control_zcam(camera_ip, 'stop')
 
     # Define current filename
     curr_scene   =  "{:03d}".format(scene_num)

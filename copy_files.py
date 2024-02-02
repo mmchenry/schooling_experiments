@@ -1,4 +1,4 @@
-""" Copies over all centroid files and experiment_log.csv files from the TRex on Vortex to a local directory. """
+""" Copies over all data files and experiment_log.csv files from the TRex on Vortex to a local directory. """
 
 import os
 import shutil
@@ -8,7 +8,10 @@ src_root = "/Volumes/schooling/TRex/data"
 dest_root = "/Users/mmchenry/Documents/Projects/waketracking/data"
 
 # Directories to exclude
-excluded_dirs = ['.DS_Store', 'Test', "TestSchoolBhav", "miniScaleRN", "RN_Prop_prelim", "Test", "TestSchoolBhav"]
+excluded_dirs = ['.DS_Store', 'Test', "TestSchoolBhav", "miniScaleRN", "RN_Prop_prelim", "Test", "TestSchoolBehav", "rampTest", "RN_Ramp_Debug","blank_settings.settings", "_RN_Scale"]
+
+# Files to include, within the matlab/centroid folder
+included_files = ['_rawfish.mat', '_mutual_info.mat', '_peaks.mat', '_network.mat', '_schooldata.mat', '_focalfish.mat', '_peaks.mat']
 
 # Get list of project directories, excluding unwanted ones
 project_dirs = [dir for dir in os.listdir(src_root) if dir not in excluded_dirs and os.path.isdir(os.path.join(src_root, dir))]
@@ -43,7 +46,8 @@ for idx, project_dir in enumerate(project_dirs):
         
         # Iterate through all files and copy the ones that match our criteria
         for filename in os.listdir(src_matlab_path):
-            if filename.endswith(('_rawfish.mat','mutual_info.mat','_peaks.mat','_networ.mat','_schooldata.mat', '_focalfish.mat')):
+            # if filename.endswith(('_rawfish.mat','mutual_info.mat','_peaks.mat','_networ.mat','_schooldata.mat', '_focalfish.mat')):
+            if filename.endswith(included_files):
                 src_file = os.path.join(src_matlab_path, filename)
                 if os.path.isfile(src_file):
                     dest_file = os.path.join(dest_matlab_path, filename)
