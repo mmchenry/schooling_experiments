@@ -40,4 +40,5 @@ The recorder can be configured to trigger when the timecode begins and it stops 
 
 ## Control of Z-Cam
 
-The Z-Cam E2-M4 that we used accepts a direct Ethernet connection from the computer. We therefore controlled it with networked commands.
+The Z-Cam E2-M4 that we used accepts a direct Ethernet connection from the computer. We therefore controlled it with networked commands. 
+The Python commands were determined with help from Chat-GPT, based on the [Network API for the Z-Cam](https://github.com/imaginevision/Z-Camera-Doc/blob/master/E2/protocol/http.md#Video-record-control).

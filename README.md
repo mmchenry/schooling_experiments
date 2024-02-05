@@ -1,4 +1,4 @@
-# wake_tracking
+# schooling_experiments
 
 Code for running code through the wake-tracking project, which tests whether some fish species can follow the wake of neighboring fish in the dark. Here we have developed python code for controlling devices during the running of experiments and the acquisition of kinematic data from the video recordings.
 

@@ -380,9 +380,80 @@ def control_zcam(camera_ip, command):
 
 
 
+def sync_camera_datetime(camera_ip):
+    """
+    Sets the date and time on the ZCam to match the computer's date and time.
+    camera_ip - IP address of the ZCam
+    """
+    # Check communication with the camera
+    test_url = f"http://{camera_ip}"
+    test_response = requests.get(test_url)
+    
+    if test_response.status_code == 200:
+        print("Communication with the camera successful. Proceeding to set date and time.")
+        
+        # Get current date and time from the computer
+        now = dt.datetime.now()
+        date_str = now.strftime("%Y-%m-%d")
+        time_str = now.strftime("%H:%M:%S")
+        
+        # Construct URL for setting date and time on the camera
+        datetime_url = f"http://{camera_ip}/datetime?date={date_str}&time={time_str}"
+        datetime_response = requests.get(datetime_url)
+        
+        if datetime_response.status_code == 200:
+            data = datetime_response.json()
+            if data['code'] == 0:
+                print("Date and time set successfully on the camera.")
+            else:
+                print(f"Failed to set date and time on the camera. Response: {data}")
+        else:
+            print(f"Error setting date and time: {datetime_response.status_code}")
+    else:
+        print(f"Communication with the camera failed. Status Code: {test_response.status_code}")
+
+
+
+def get_latest_file(camera_ip):
+    """
+    Reads the latest file from the ZCam.
+    """
+    # Step 1: List folders in /DCIM/
+    folders_url = f"http://{camera_ip}/DCIM/"
+    folders_response = requests.get(folders_url)
+    
+    if folders_response.status_code == 200:
+        folders_data = folders_response.json()
+        if folders_data['code'] == 0 and folders_data['files']:
+            # Step 2: Choose the folder with the highest number
+            latest_folder = sorted(folders_data['files'], reverse=True)[0]
+            
+            # Step 3: List the files in that folder
+            files_url = f"http://{camera_ip}/DCIM/{latest_folder}"
+            files_response = requests.get(files_url)
+            
+            if files_response.status_code == 200:
+                files_data = files_response.json()
+                if files_data['code'] == 0 and files_data['files']:
+                    # Step 4: Choose the file with the latest timestamp or the highest number
+                    latest_file = sorted(files_data['files'], reverse=True)[0]
+                    # print(f"The latest file is: {latest_file}")
+                    return latest_file
+                else:
+                    print(f"Failed to get files list. Response: {files_data}")
+            else:
+                print(f"Error listing files in folder {latest_folder}: {files_response.status_code}")
+        else:
+            print(f"Failed to get folders list. Response: {folders_data}")
+    else:
+        print(f"Error listing folders in /DCIM/: {folders_response.status_code}")
+
+# camera_ip = "192.168.1.2"  # Replace with your camera's actual IP address
+# latest_file = get_latest_file(camera_ip)
+
+
 def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_path=None, trig_video=True, 
-        echo=False, plot_data=True, movie_prefix=None, control_hw=True, scene_num=1, shot_num=1, take_num=1, 
-        sch_num=999, trial_num=0, camera_ip=None):
+        echo=False, plot_data=True, movie_prefix=None, control_hw=True, scene_num=None, shot_num=None, take_num=None, sch_num=999, trial_num=0, camera_ip=None):
     """ 
     Transmits signal to control light intensity via Enttex DMX USB Pro.
     dmx            - specifies the hardware address for the Enttex device
@@ -415,7 +486,7 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
         raise OSError("log_path not found at " + log_path)
 
     # Check for audio file
-    if control_hw and (aud_path!=None) and (not os.path.isfile(aud_path)):
+    if control_hw and trig_video and (aud_path!=None) and (not os.path.isfile(aud_path)):
         raise OSError("aud_path not found at " + aud_path)
 
     # Dataframe of light and control levels 
@@ -458,7 +529,8 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
         p.start()
 
     # Start video recording on ZCam
-    elif control_hw and (camera_ip!=None):
+    elif control_hw and trig_video and (camera_ip!=None):
+        last_filename = get_latest_file(camera_ip)
         control_zcam(camera_ip, 'start')
 
     # Send data to dmx in loop until time runs out
@@ -486,15 +558,20 @@ def run_program(dmx, aud_path, light_level, light_dur=None, ramp_dur=None, log_p
         p.terminate()
         print('    Timecode audio ended.')
 
-    # End video recording on ZCam
-    elif control_hw and (camera_ip!=None):
-        control_zcam(camera_ip, 'stop')
+        # Define current filename
+        curr_scene   =  "{:03d}".format(scene_num)
+        curr_shot    = "{:03d}".format(shot_num)
+        curr_take    = "{:03d}".format(take_num)
+        vid_filename = movie_prefix + '_S' + curr_scene[-3:] + '_S' + curr_shot[-3:] + '_T' + curr_take[-3:]
 
-    # Define current filename
-    curr_scene   =  "{:03d}".format(scene_num)
-    curr_shot    = "{:03d}".format(shot_num)
-    curr_take    = "{:03d}".format(take_num)
-    vid_filename = movie_prefix + '_S' + curr_scene[-3:] + '_S' + curr_shot[-3:] + '_T' + curr_take[-3:]
+    # End video recording on ZCam
+    elif control_hw and trig_video and (camera_ip!=None):
+        control_zcam(camera_ip, 'stop')
+        vid_filename = get_latest_file(camera_ip)
+
+        # Report new file
+        if vid_filename != last_filename:
+            print(f"    New file created on ZCam: {vid_filename}")
 
     # If you are logging the ramp . . .
     if log_path!=None:
