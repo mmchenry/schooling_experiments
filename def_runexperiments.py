@@ -362,6 +362,8 @@ def control_zcam(camera_ip, command):
         url = f"http://{camera_ip}/ctrl/rec?action=start"
     elif command == 'stop':
         url = f"http://{camera_ip}/ctrl/rec?action=stop"
+    elif command == 'shutdown':
+        url = f"http://{camera_ip}/ctrl/shutdown"
     else:
         raise ValueError("Do not recognize command: " + command)
     
