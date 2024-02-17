@@ -262,7 +262,7 @@ def find_schedule_matches(csv_dir, match_dir, font_size=30):
     return sch_num, sch_date, analysis_schedule
 
 
-def check_logs(path, analysis_schedule, sch_num, sch_date, vid_ext_raw,fixed_columns=None):
+def check_logs(path, analysis_schedule, sch_num, sch_date, vid_ext_raw, recorder='ZCam', fixed_columns=None, fps=120):
     """ Check that the schedule matches the catalog and the catalog matches the experiment log. Also check that the video files exist. Add timecode data experiment_log.csv if it does not exist.
     Args:
         path (dict): Dictionary of paths.
@@ -323,7 +323,7 @@ def check_logs(path, analysis_schedule, sch_num, sch_date, vid_ext_raw,fixed_col
     vid_path = path['vidin'] + os.sep +  sch_date
 
     # Flag any large differences in video duration from experiment log, return list of videos to be processed
-    vid_files = check_video_duration(vid_path, sch, cat, vid_ext=vid_ext_raw, thresh_time=3.0)
+    vid_files = check_video_duration(vid_path, sch, cat, vid_ext=vid_ext_raw, thresh_time=3.0, recorder=recorder, fps=fps)
 
     # Read the full cat file
     cat_raw = pd.read_csv(path['cat'])
@@ -351,7 +351,7 @@ def check_logs(path, analysis_schedule, sch_num, sch_date, vid_ext_raw,fixed_col
         print('Time code data already exists in experiment_log.csv')
 
 
-def check_video_duration(vid_dir, sch, cat, vid_ext='MOV', thresh_time=3.0):
+def check_video_duration(vid_dir, sch, cat, vid_ext='MOV', thresh_time=3.0, recorder='ZCam', fps=120):
     """Check the duration of each video file in a directory and compare that to the expected duration from sch dataframe.
     Args:
         vid_dir (str): Path to the directory containing the video files.
@@ -369,10 +369,19 @@ def check_video_duration(vid_dir, sch, cat, vid_ext='MOV', thresh_time=3.0):
     # Loop through each video file
     for file in vid_files:
 
+        
         # Get the duration of the video file
         vid_path = os.path.join(vid_dir, file)
         vid = cv2.VideoCapture(vid_path)
-        vid_duration = vid.get(cv2.CAP_PROP_FRAME_COUNT) / vid.get(cv2.CAP_PROP_FPS)
+
+        # Frame rate
+        if recorder == 'ZCam':
+            frame_rate = fps
+        else:
+            frame_rate = vid.get(cv2.CAP_PROP_FPS)
+
+        # Video duration
+        vid_duration = vid.get(cv2.CAP_PROP_FRAME_COUNT) / frame_rate
         vid.release()
 
         # Get the trial number (trial_num) from cat that matches the current video file
