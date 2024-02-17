@@ -13,7 +13,7 @@ import time
 import sys
 
 
-def run_make_binary_videos(run_mode, path, local_path, proj_name, vid_ext_raw, vid_ext_proc, mov_idx=0):
+def run_make_binary_videos(run_mode, path, local_path, proj_name, vid_ext_raw, vid_ext_proc, mov_idx=0, recorder='ZCam', fps=120):
     """Run make_binary_movie() for all videos in cat where make_video==1.
     Args:
         run_mode (str): Run mode ('single', 'sequential', or 'parallel').
@@ -76,7 +76,8 @@ def run_make_binary_videos(run_mode, path, local_path, proj_name, vid_ext_raw, v
 
             # Generate and save binary movie
             make_binary_movie(vid_path_in, vid_path_out, mean_image, row['threshold'], min_area, max_area,
-                                im_mask=im_mask, mask_perim=mask_perim, im_crop=True, status_txt=status_txt, echo=True, blob_color='white')
+                                im_mask=im_mask, mask_perim=mask_perim, im_crop=True, status_txt=status_txt, echo=True, 
+                                blob_color='white', recorder=recorder, fps=fps)
             
     elif run_mode == 'parallel':
 
@@ -118,7 +119,8 @@ def run_make_binary_videos(run_mode, path, local_path, proj_name, vid_ext_raw, v
 
             # Generate and save binary movie
             make_binary_movie(vid_path_in, vid_path_out, mean_image, row['threshold'], min_area, max_area,
-                im_mask=im_mask, mask_perim=mask_perim, im_crop=True, status_txt=status_txt, echo=True, blob_color='grayscale')
+                im_mask=im_mask, mask_perim=mask_perim, im_crop=True, status_txt=status_txt, echo=True, 
+                blob_color='grayscale', recorder=recorder, fps=fps)
 
         # Create a ThreadPoolExecutor to execute the iterations in parallel
         with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -137,7 +139,8 @@ def run_make_binary_videos(run_mode, path, local_path, proj_name, vid_ext_raw, v
     
 
 def run_mean_image(path, sch_num, sch_date, analysis_schedule, max_num_frame_meanimage=200, 
-                   font_size=30, overwrite_existing=False, trial_specific_mean=False, show_image=True):
+                   font_size=30, overwrite_existing=False, trial_specific_mean=False, show_image=True, 
+                   recorder='ZCam', fps=120):
 
     # Get schedule data
     sch = pd.read_csv(path['sch'] + os.sep + analysis_schedule + '.csv')
@@ -184,7 +187,8 @@ def run_mean_image(path, sch_num, sch_date, analysis_schedule, max_num_frame_mea
 
             # Make mean image
             mean_image = make_max_mean_image(cat_curr, sch_curr, vid_path, max_num_frame_meanimage, 
-                                             im_mask=im_mask, mask_perim=mask_perim, im_crop=True)
+                                             im_mask=im_mask, mask_perim=mask_perim, im_crop=True, 
+                                             recorder=recorder, frame_rate=fps)
 
             # Save the mean image
             mean_image_path = path['mean'] + os.sep + row.mask_filename + '_mean.jpg'
@@ -607,7 +611,7 @@ def read_frame(cap, idx, im_mask=None, mask_perim=None, im_crop=False, outside_c
 
 
 def make_max_mean_image(cat_curr, sch, vid_path, max_num_frames, im_mask=None, mask_perim=None, im_crop=False, 
-                        vid_ext_raw='MOV'):
+                        vid_ext_raw='MOV', recorder='ZCam', frame_rate=120):
     """Create a mean image from a video capture object. Selects frames from movies where the light is set at maximum intensity for the batch.
         args:
             cat_cur: Subset of experiment_log to be included in mean image
@@ -705,7 +709,13 @@ def make_max_mean_image(cat_curr, sch, vid_path, max_num_frames, im_mask=None, m
             raise ValueError('Video file does not exist: ' + full_path)
 
         vid = cv2.VideoCapture(full_path)
-        fps = vid.get(cv2.CAP_PROP_FPS)
+
+        # Frame rate
+        if recorder == 'ZCam':
+            fps = frame_rate
+        else:
+            fps = vid.get(cv2.CAP_PROP_FPS)
+
         total_frames = int(vid.get(cv2.CAP_PROP_FRAME_COUNT))
         # total_time = total_frames/fps
 
@@ -885,7 +895,7 @@ def fill_and_smooth(image, num_iterations=3, kernel_size=3):
 
 def make_binary_movie(vid_path_in, vid_path_out, mean_image, threshold, min_area, max_area,
                       im_mask=None, mask_perim=None, im_crop=True, status_txt=None, thresh_tol=0.05, echo=False,
-                      blob_color='grayscale'):
+                      blob_color='grayscale', recorder='ZCam', fps=120):
     """Make a binary movie from a video.
     Args:
         vid_path_in (str): Path to input video.
@@ -929,8 +939,13 @@ def make_binary_movie(vid_path_in, vid_path_out, mean_image, threshold, min_area
     im_thresh2 = fill_and_smooth(im_thresh)
     total_area0 = np.sum(im_thresh2 > 0)
 
+    if recorder == 'ZCam':
+        frame_rate = fps
+    else:
+        frame_rate = int(vid_in.get(cv2.CAP_PROP_FPS))
+
     # Create video writer object for am mp4 video that otherwise has the same properties as input video
-    vid_out = cv2.VideoWriter(vid_path_out, fourcc, int(vid_in.get(cv2.CAP_PROP_FPS)), (im.shape[1], im.shape[0]), isColor=False)
+    vid_out = cv2.VideoWriter(vid_path_out, fourcc, frame_rate, (im.shape[1], im.shape[0]), isColor=False)
 
     # Start time for calculating elapsed time
     start_time = time.time()

@@ -9,7 +9,7 @@
 # proj_name = 'BS_Basic'
 # proj_name = 'PT_basic'
 # proj_name = 'RN_Prop'
-proj_name = 'RN_Ramp'
+proj_name = 'BN_nwcam'
 
 
 # This specifies whether the mask is specific to a trial (True) or the same for all trials (False)
@@ -31,6 +31,12 @@ max_num_frame_meanimage = 200
 # Raw and processed video extensions
 vid_ext_raw = 'MOV'
 vid_ext_proc = 'mp4'
+
+# Device used to record ('ZCam' or 'Atomos')
+recorder = 'ZCam'
+
+# Frame rate (only for ZCam)
+fps = 120
 
 # Installed packages
 import os
@@ -105,7 +111,7 @@ fixed_columns = ['date','sch_num','trial_num','school_id','fish_num','exp_type',
 sch_num, sch_date, analysis_schedule = vp.find_schedule_matches(path['sch'], path['vidin'], font_size=30)
 
 # Check that the schedule matches the catalog and the catalog matches the experiment log. Also check that the video files exist. Add timecode data.
-vp.check_logs(path, analysis_schedule, sch_num, sch_date, vid_ext_raw,fixed_columns=fixed_columns)
+vp.check_logs(path, analysis_schedule, sch_num, sch_date, vid_ext_raw,recorder=recorder, fixed_columns=fixed_columns, fps=fps)
 
 
 #%% =================================================================================================
@@ -128,7 +134,7 @@ gf.run_spatial_calibration(path, sch_date, sch_num, vid_ext_raw, analysis_schedu
 # A mean image is created from multiple videos in the batch.
 
 vp.run_mean_image(path, sch_num, sch_date, analysis_schedule, max_num_frame_meanimage, overwrite_existing=True,
-                  trial_specific_mean=trial_specific_mask, show_image=False)
+                  trial_specific_mean=trial_specific_mask, show_image=False, recorder=recorder, fps=fps)
 
 
 #%% =================================================================================================
@@ -146,7 +152,7 @@ gf.run_threshold_choice(path, sch_date, sch_num, analysis_schedule, vid_ext_raw,
 # (the fastest option).
 
 run_mode = 'sequential' # May be single, sequential, or parallel
-vp.run_make_binary_videos(run_mode, path, local_path, proj_name, vid_ext_raw, vid_ext_proc, mov_idx=0)
+vp.run_make_binary_videos(run_mode, path, local_path, proj_name, vid_ext_raw, vid_ext_proc, mov_idx=0, recorder=recorder, fps=fps)
 
 
 #%% =================================================================================================
