@@ -11,7 +11,7 @@ dest_root = "/Users/mmchenry/Documents/Projects/waketracking/data"
 excluded_dirs = ['.DS_Store', 'Test', "TestSchoolBhav", "miniScaleRN", "RN_Prop_prelim", "Test", "TestSchoolBehav", "rampTest", "RN_Ramp_Debug","blank_settings.settings", "_RN_Scale"]
 
 # Files to include, within the matlab/centroid folder
-included_files = ['_rawfish.mat', '_mutual_info.mat', '_peaks.mat', '_network.mat', '_schooldata.mat', '_focalfish.mat', '_peaks.mat']
+included_files = tuple(['_rawfish.mat', '_mutual_info.mat', '_peaks.mat', '_network.mat', '_schooldata.mat', '_focalfish.mat', '_peaks.mat'])
 
 # Get list of project directories, excluding unwanted ones
 project_dirs = [dir for dir in os.listdir(src_root) if dir not in excluded_dirs and os.path.isdir(os.path.join(src_root, dir))]

@@ -11,7 +11,6 @@
 # proj_name = 'RN_Prop'
 proj_name = 'BN_nwcam'
 
-
 # This specifies whether the mask is specific to a trial (True) or the same for all trials (False)
 trial_specific_mask = False
 
