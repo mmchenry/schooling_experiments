@@ -355,7 +355,7 @@ def check_logs(path, analysis_schedule, sch_num, sch_date, vid_ext_raw, recorder
         print('Time code data already exists in experiment_log.csv')
 
 
-def check_video_duration(vid_dir, sch, cat, vid_ext='MOV', thresh_time=3.0, recorder='ZCam', fps=120):
+def check_video_duration(vid_dir, sch, cat, vid_ext='MOV', thresh_time=3.0, recorder='ZCam', trial_specific_mask=False, fps=120):
     """Check the duration of each video file in a directory and compare that to the expected duration from sch dataframe.
     Args:
         vid_dir (str): Path to the directory containing the video files.
@@ -368,8 +368,11 @@ def check_video_duration(vid_dir, sch, cat, vid_ext='MOV', thresh_time=3.0, reco
     """
 
     # Get filenames of video files without extensions
-    vid_files = get_matching_video_filenames(cat, vid_dir, vid_ext=vid_ext)
+    vid_files = get_matching_video_filenames(cat, vid_dir, vid_ext=vid_ext, trial_specific_mask=trial_specific_mask)
 
+    if sch is None:
+        return vid_files
+    
     # Loop through each video file
     for file in vid_files:
 
@@ -414,7 +417,7 @@ def check_video_duration(vid_dir, sch, cat, vid_ext='MOV', thresh_time=3.0, reco
 
     return vid_files
 
-def get_matching_video_filenames(cat, directory, vid_ext='MOV'):
+def get_matching_video_filenames(cat, directory, vid_ext='MOV', trial_specific_mask=False):
     """Get the filenames of the video files in a directory that match the video filenames in the cat dataframe.
     Args:
         cat (pandas.DataFrame): Pandas dataframe containing the recording log.

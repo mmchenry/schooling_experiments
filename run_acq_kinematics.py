@@ -6,10 +6,7 @@
 # - local_path needs to be a directory on a local drive for writing binary video files for TGrabs/TRex.
 
 # The project name need to match a directory name within the root path
-# proj_name = 'BS_Basic'
-# proj_name = 'PT_basic'
-# proj_name = 'RN_Prop'
-proj_name = 'BN_nwcam'
+proj_name = 'pilot'
 
 # This specifies whether the mask is specific to a trial (True) or the same for all trials (False)
 trial_specific_mask = False
@@ -37,6 +34,11 @@ recorder = 'ZCam'
 # Frame rate (only for ZCam)
 fps = 120
 
+# Schedule date and number (not used)
+sch_date = None
+sch_num = None
+analysis_schedule = None
+
 # Installed packages
 import os
 import platform
@@ -53,7 +55,8 @@ import gui_functions as gf
 # Matt's laptop
 if (platform.system() == 'Darwin') and (os.path.expanduser('~')=='/Users/mmchenry'):
     
-    root_path = '/Users/mmchenry/Documents/Projects/waketracking'
+    # Local path
+    root_path = '/Users/mmchenry/Documents/Projects/barbels'
     local_path = root_path
 
 # Matt on PopOS! machine
@@ -95,30 +98,15 @@ elif not os.path.exists(local_path):
 path = dp.give_paths(root_path, proj_name)
 
 # Listing of column names that should start cat
-fixed_columns = ['date','sch_num','trial_num','school_id','fish_num','exp_type','analyze','make_video','run_tgrabs','run_trex','run_matlab']
-
-
-#%% =================================================================================================
-""" Select schedule, check for problems in recordings"""
-# Note: need to run this for cells below.
-#     Here we prompt the user to select which schedule to choose for preprocessing. Along the way, it checks for the following:
-#     - That the experiment_log.csv and recording_log.csv lists include all trials in the schedule.
-# - Compares the schedules in the project against video recordings
-# - It compares the duration of recorded videos to what was expected in the schedule and alerts user of large differences.
-
-# Find matching experiments between the schedule and video directories
-sch_num, sch_date, analysis_schedule = vp.find_schedule_matches(path['sch'], path['vidin'], font_size=30)
-
-# Check that the schedule matches the catalog and the catalog matches the experiment log. Also check that the video files exist. Add timecode data.
-vp.check_logs(path, analysis_schedule, sch_num, sch_date, vid_ext_raw,recorder=recorder, fixed_columns=fixed_columns, fps=fps)
+fixed_columns = ['date','trial_num','school_id','fish_num','exp_type','calibration','analyze','make_video','run_tgrabs','run_trex']
 
 
 #%% =================================================================================================
 """ Create a mask image"""
 # You will want to choose a region of interest that is just outside of the water line within the arena.
-
-gf.run_mask_acq(path, sch_date, sch_num, vid_ext_raw, analysis_schedule, overwrite_existing=True, 
-                trial_specific_mask=trial_specific_mask)
+trial_specific_mask = True
+gf.run_mask_acq(path, vid_ext_raw, analysis_schedule, sch_date, sch_num, 
+                overwrite_existing=True, trial_specific_mask=trial_specific_mask)
 
 
 #%% =================================================================================================

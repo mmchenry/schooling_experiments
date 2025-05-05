@@ -9,7 +9,7 @@ import math
 import glob
 
 
-def generate_filename(date, sch_num, trial_num=None):
+def generate_filename(date, sch_num=None, trial_num=None):
     """ Generates a filename for the video based on the date, schedule number, and trial number.
     Args:
         date: Date of the experiment in the format YYYYMMDD
@@ -18,7 +18,11 @@ def generate_filename(date, sch_num, trial_num=None):
     Returns:
         filename: Filename for the video
     """
-    if trial_num is None:
+    if sch_num is None and trial_num is None:
+        return date
+    elif sch_num is None:
+        return date + '_tr' + str(int(trial_num)).zfill(3)
+    elif trial_num is None:
         return date + '_sch' + str(int(sch_num)).zfill(3)
     else:
         return date + '_sch' + str(int(sch_num)).zfill(3) + '_tr' + str(int(trial_num)).zfill(3)
@@ -106,7 +110,7 @@ def get_cat_info(cat_path, include_mode='all', exclude_mode=None, fixed_columns=
 
     # Determine which rows to exclude
     if exclude_mode == 'calibration':
-        d = d.loc[(d.sch_num != 999)]
+        d = d.loc[(d.calibration == 0)]
 
     # Reset indices for the new rows
     d = d.reset_index(drop=True)
