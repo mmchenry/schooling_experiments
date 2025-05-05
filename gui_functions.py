@@ -203,7 +203,10 @@ def run_mask_acq(path, vid_ext_raw, analysis_schedule, sch_date=None, sch_num=No
 
         # Store mask_filename in cat_raw
         if (not os.path.exists(mask_path)) or overwrite_existing:
-            cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == sch_num) & (cat_raw['trial_num'] == row.trial_num), 'mask_filename'] = mask_filename
+            if sch_num is not None:
+                cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == sch_num) & (cat_raw['trial_num'] == row.trial_num), 'mask_filename'] = mask_filename
+            else:
+                cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['trial_num'] == row.trial_num), 'mask_filename'] = mask_filename
 
     # Save cat_raw (i.e., experiment_log.csv)
     cat_raw.to_csv(path['cat'], index=False)

@@ -63,7 +63,7 @@ if (platform.system() == 'Darwin') and (os.path.expanduser('~')=='/Users/mmchenr
 elif (platform.system() == 'Linux') and (os.path.expanduser('~')=='/home/mmchenry'):
 
     # root_path = '/home/mmchenry/Documents/wake_tracking'
-    root_path = '/mnt/schooling/TRex'
+    root_path = '/mnt/barbel/Projects'
     local_path = '/home/mmchenry/Documents/wake_tracking/video/binary'
 
 # Ashley on Linux
