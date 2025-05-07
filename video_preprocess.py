@@ -50,7 +50,10 @@ def run_make_binary_videos(run_mode, path, local_path, proj_name, vid_ext_raw, v
             trial_num = row['trial_num'] if 'trial_num' in row else None
 
             # Path to all videos for the current date
-            vid_path = path['vidin'] + os.sep +  sch_date
+            if sch_num is not None:
+                vid_path = path['vidin'] + os.sep +  sch_date
+            else:
+                vid_path = path['vidin']
 
             # Get the mask
             mask_filename = af.generate_filename(sch_date, sch_num, trial_num=trial_num)
@@ -571,21 +574,22 @@ def read_frame(cap, idx, im_mask=None, mask_perim=None, im_crop=False, outside_c
             raise ValueError("im_mask must be defined if im_crop is True.")
 
     # Read frame at index idx
-    cap.set(cv2.CAP_PROP_POS_FRAMES, idx)
-    _, frame = cap.read()
-
-    if frame is None:
-        raise ValueError(f"Invalid frame at index {idx}")
+    success = cap.set(cv2.CAP_PROP_POS_FRAMES, idx)
+    if not success:
+        raise ValueError(f"Failed to set frame position to index {idx}")
+    
+    ret, frame = cap.read()
+    if not ret or frame is None:
+        # Try to get video properties for debugging
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        current_pos = int(cap.get(cv2.CAP_PROP_POS_FRAMES))
+        raise ValueError(f"Failed to read frame at index {idx}. Video has {total_frames} frames, current position is {current_pos}")
 
     if color_mode=='grayscale':
-        frame =     cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-
-    if frame is  None:
-        print(f"Invalid frame at index {idx}")
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
 
     # Mask frame, if mask image given
     if im_mask is not None:
-
         # Apply mask to frame
         masked_frame = cv2.bitwise_and(frame, frame, mask=im_mask)
 
@@ -1063,6 +1067,10 @@ def make_binary_movie(vid_path_in, vid_path_out, mean_image, threshold, min_area
 
     # Define the codec to use for video encoding
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Specify the video codec (e.g., 'mp4v' for MP4)
+
+    # Check if vid_path_in exists
+    if not os.path.exists(vid_path_in):
+        raise ValueError('Video file does not exist: ' + vid_path_in)
 
     # Set up input video and properties
     vid_in  = cv2.VideoCapture(vid_path_in)
