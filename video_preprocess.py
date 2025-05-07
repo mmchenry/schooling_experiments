@@ -446,7 +446,11 @@ def get_matching_video_filenames(cat, directory, vid_ext='MOV', trial_specific_m
     Returns:
         matching_video_filenames (list): List of filenames that match.
         """
-    video_filenames = cat['video_filename'].tolist()
+    video_filenames = cat['video_filename']
+    if isinstance(video_filenames, str):
+        video_filenames = [video_filenames]
+    else:
+        video_filenames = video_filenames.tolist()
     matching_video_filenames = []
 
     for filename in os.listdir(directory):

@@ -16,63 +16,73 @@ import acqfunctions as af
 
 def run_threshold_choice(path, sch_date, sch_num, analysis_schedule, vid_ext_raw, font_size=30, overwrite_existing=False):
 
-    # Get schedule data
-    sch = pd.read_csv(path['sch'] + os.sep + analysis_schedule + '.csv')
-
     # Extract experiment catalog info
     cat = af.get_cat_info(path['cat'], include_mode='both', exclude_mode='calibration')
 
     # Read the full cat file
     cat_raw = pd.read_csv(path['cat'])
 
-    # Path to all videos for the current date
-    vid_path = path['vidin'] + os.sep +  sch_date
+    # Get schedule data
+    if sch_num is not None:
+        sch = pd.read_csv(path['sch'] + os.sep + analysis_schedule + '.csv')
 
-    # Flag any large differences in video duration from experiment log, return list of videos to be processed
-    vid_files = vp.check_video_duration(vid_path, sch, cat, vid_ext=vid_ext_raw, thresh_time=3.0)
-
-    # Check if 'min_area' column exists in cat_raw and does not have nans
-    if ('min_area' not in cat_raw.columns) or (cat_raw['min_area'].isnull().any()) or overwrite_existing:
-
-        # Get the mask
-        mask_filename = af.generate_filename(sch_date, sch_num, trial_num=None)
-        mask_path = path['mask'] + os.sep + mask_filename + '_mask.jpg'
-        im_mask, mask_perim = vp.get_mask(mask_path)
-
-        # Get the mean image
-        mean_image_path = path['mean'] + os.sep + mask_filename + '_mean.jpg'
-        mean_image = cv2.imread(mean_image_path, cv2.IMREAD_UNCHANGED)
-
-        # read first frame of first video
-        vid_path_curr = vid_path + os.sep + vid_files[0]
-        vid = cv2.VideoCapture(vid_path_curr)
-        im_start = vp.read_frame(vid, 0, im_mask=im_mask, mask_perim=mask_perim, im_crop=True)
-        vid.release()
-
-        # Select the threshold
-        threshold, im_thresholded = interactive_threshold(im_start, mean_image)
-        print('Selected threshold = ' + str(threshold))
-
-        # Select the bounds of blob area
-        print(' ')
-        print('Select the bounds of blob area that include just a single fish')
-        min_area, max_area = interactive_blob_filter(im_start, mean_image, threshold)
-        print('Selected min_area = ' + str(min_area))
-        print('Selected max_area = ' + str(max_area))
-
-        # Save results to experiment_log.csv
-        cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == sch_num), 'threshold'] = threshold
-        cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == sch_num), 'min_area'] = min_area
-        cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == sch_num), 'max_area'] = max_area
-
-        # Write cat_raw, if it has the same dimensions, or one new column
-        cat_raw.to_csv(path['cat'], index=False)
-        print(' ')
-        print('Added threshold and area values to experiment_log.csv')
-
+        # Path to all videos for the current date
+        vid_path = path['vidin'] + os.sep +  sch_date
     else:
-        print(' ')
-        print('Threshold and area values already exist in experiment_log.csv for the current date and schedule number.')
+        sch = None
+        vid_path = path['vidin']
+
+    for index, row in cat.iterrows():
+
+        # Flag any large differences in video duration from experiment log, return list of videos to be processed
+        vid_files = vp.check_video_duration(vid_path, sch, row, vid_ext=vid_ext_raw, thresh_time=3.0)
+
+        # Check if 'min_area' column exists in cat_raw and does not have nans
+        if ('min_area' not in row) or pd.isnull(row['min_area']) or overwrite_existing:
+
+            if sch_date is None:
+                sch_date = row.date
+                sch_num  = None
+
+            # Get the mask
+            mask_filename = af.generate_filename(sch_date, sch_num, trial_num=row.trial_num)
+            mask_path = path['mask'] + os.sep + mask_filename + '_mask.jpg'
+            im_mask, mask_perim = vp.get_mask(mask_path)
+
+            # Get the mean image
+            mean_image_path = path['mean'] + os.sep + mask_filename + '_mean.jpg'
+            mean_image = cv2.imread(mean_image_path, cv2.IMREAD_UNCHANGED)
+
+            # read first frame of first video
+            vid_path_curr = vid_path + os.sep + vid_files[0]
+            vid = cv2.VideoCapture(vid_path_curr)
+            im_start = vp.read_frame(vid, 0, im_mask=im_mask, mask_perim=mask_perim, im_crop=True)
+            vid.release()
+
+            # Select the threshold
+            threshold, im_thresholded = interactive_threshold(im_start, mean_image)
+            print('Selected threshold = ' + str(threshold))
+
+            # Select the bounds of blob area
+            print(' ')
+            print('Select the bounds of blob area that include just a single fish')
+            min_area, max_area = interactive_blob_filter(im_start, mean_image, threshold)
+            print('Selected min_area = ' + str(min_area))
+            print('Selected max_area = ' + str(max_area))
+
+            # Save results to experiment_log.csv
+            cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == sch_num), 'threshold'] = threshold
+            cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == sch_num), 'min_area'] = min_area
+            cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == sch_num), 'max_area'] = max_area
+
+            # Write cat_raw, if it has the same dimensions, or one new column
+            cat_raw.to_csv(path['cat'], index=False)
+            print(' ')
+            print('Added threshold and area values to experiment_log.csv')
+
+        else:
+            print(' ')
+            print('Threshold and area values already exist in experiment_log.csv for the current date and schedule number.')
 
 
 def run_spatial_calibration(path, sch_date, sch_num, vid_ext_raw, analysis_schedule, num_reps=3, font_size=40, overwrite_existing=False):
