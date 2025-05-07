@@ -39,6 +39,8 @@ sch_date = None
 sch_num = None
 analysis_schedule = None
 
+trial_specific_mask = True
+
 # Installed packages
 import os
 import platform
@@ -104,7 +106,6 @@ fixed_columns = ['date','trial_num','school_id','fish_num','exp_type','calibrati
 #%% =================================================================================================
 """ Create a mask image"""
 # You will want to choose a region of interest that is just outside of the water line within the arena.
-trial_specific_mask = True
 gf.run_mask_acq(path, vid_ext_raw, analysis_schedule, sch_date, sch_num, 
                 overwrite_existing=True, trial_specific_mask=trial_specific_mask)
 
