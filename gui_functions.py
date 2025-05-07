@@ -53,6 +53,9 @@ def run_threshold_choice(path, sch_date, sch_num, analysis_schedule, vid_ext_raw
             mean_image_path = path['mean'] + os.sep + mask_filename + '_mean.jpg'
             mean_image = cv2.imread(mean_image_path, cv2.IMREAD_UNCHANGED)
 
+            if mean_image is None:
+                raise ValueError('The mean image does not exist: ' + mean_image_path)
+
             # read first frame of first video
             vid_path_curr = vid_path + os.sep + vid_files[0]
             vid = cv2.VideoCapture(vid_path_curr)
@@ -71,9 +74,14 @@ def run_threshold_choice(path, sch_date, sch_num, analysis_schedule, vid_ext_raw
             print('Selected max_area = ' + str(max_area))
 
             # Save results to experiment_log.csv
-            cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == sch_num), 'threshold'] = threshold
-            cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == sch_num), 'min_area'] = min_area
-            cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == sch_num), 'max_area'] = max_area
+            if sch_num is not None:
+                cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == sch_num), 'threshold'] = threshold
+                cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == sch_num), 'min_area'] = min_area
+                cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == sch_num), 'max_area'] = max_area
+            else:
+                cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['trial_num'] == row.trial_num), 'threshold'] = threshold
+                cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['trial_num'] == row.trial_num), 'min_area'] = min_area
+                cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['trial_num'] == row.trial_num), 'max_area'] = max_area
 
             # Write cat_raw, if it has the same dimensions, or one new column
             cat_raw.to_csv(path['cat'], index=False)

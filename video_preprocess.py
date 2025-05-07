@@ -46,13 +46,14 @@ def run_make_binary_videos(run_mode, path, local_path, proj_name, vid_ext_raw, v
 
             # Get schedule info
             sch_date = row['date']
-            sch_num  = row['sch_num']
+            sch_num = row['sch_num'] if 'sch_num' in row else None
+            trial_num = row['trial_num'] if 'trial_num' in row else None
 
             # Path to all videos for the current date
             vid_path = path['vidin'] + os.sep +  sch_date
 
             # Get the mask
-            mask_filename = af.generate_filename(sch_date, sch_num, trial_num=None)
+            mask_filename = af.generate_filename(sch_date, sch_num, trial_num=trial_num)
             mask_path = path['mask'] + os.sep + mask_filename + '_mask.jpg'
             im_mask, mask_perim = get_mask(mask_path)
 
@@ -62,7 +63,7 @@ def run_make_binary_videos(run_mode, path, local_path, proj_name, vid_ext_raw, v
 
             # Paths for input and output videos
             vid_path_in = vid_path + os.sep + row['video_filename'] + '.' + vid_ext_raw
-            vid_file_out = af.generate_filename(row['date'], row['sch_num'], trial_num=row['trial_num'])
+            vid_file_out = af.generate_filename(row['date'], sch_num, trial_num=trial_num)
             vid_path_out = local_path + os.sep + proj_name + os.sep + vid_file_out + '.' + vid_ext_proc 
 
             # Set bounds of the area for blobs
@@ -92,7 +93,7 @@ def run_make_binary_videos(run_mode, path, local_path, proj_name, vid_ext_raw, v
 
              # Get schedule info
             sch_date = row['date']
-            sch_num  = row['sch_num']
+            sch_num = row['sch_num'] if 'sch_num' in row else None
 
             # Path to all videos for the current date
             vid_path = path['vidin'] + os.sep +  sch_date
