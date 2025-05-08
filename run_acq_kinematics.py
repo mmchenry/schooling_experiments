@@ -12,8 +12,8 @@ proj_name = 'pilot'
 trial_specific_mask = False
 
 # Other details about the project
-species = 'rummy_nose'
-exp_type = 'prop_neo'
+species = 'glass_catfish'
+exp_type = 'pair_neo_lightdark'
 
 # font size for GUIs
 font_size = 30
@@ -32,7 +32,8 @@ vid_ext_proc = 'mp4'
 recorder = 'ZCam'
 
 # Frame rate (only for ZCam)
-fps = 120
+# fps = 120
+fps = 29.97
 
 # Schedule date and number (not used)
 sch_date = None

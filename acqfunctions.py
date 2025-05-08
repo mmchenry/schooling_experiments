@@ -529,7 +529,11 @@ def run_tgrabs(cat_path, raw_path, vid_path_in, vid_path_out,  param_list_tgrabs
         # Get date, trial, and schedule numbers
         date_curr   = cat_curr.date[c_row]
         trial_curr  = cat_curr.trial_num[c_row]
-        sch_curr    = cat_curr.sch_num[c_row]
+        # Check if sch_num is a column in cat_curr
+        if 'sch_num' in cat_curr.columns:
+            sch_curr    = cat_curr.sch_num[c_row]
+        else:
+            sch_curr    = None
 
         # Generic filename for the trial
         filename = generate_filename(date_curr, sch_curr, trial_num=trial_curr)
@@ -643,7 +647,10 @@ def run_trex(cat_path, vid_path, data_path, param_list_trex, cat_to_trex, use_se
         # Get date, trial, and schedule numbers
         date_curr   = cat_curr.date[c_row]
         trial_curr  = cat_curr.trial_num[c_row]
-        sch_curr    = cat_curr.sch_num[c_row]
+        if 'sch_num' in cat_curr.columns:
+            sch_curr    = cat_curr.sch_num[c_row]
+        else:
+            sch_curr    = None
 
         # Generic filename for the trial
         filename = generate_filename(date_curr, sch_curr, trial_num=trial_curr)

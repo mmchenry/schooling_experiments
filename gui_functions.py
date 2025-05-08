@@ -105,13 +105,19 @@ def run_spatial_calibration(path, sch_date, sch_num, vid_ext_raw, analysis_sched
         """
 
     # Get schedule data
-    sch = pd.read_csv(path['sch'] + os.sep + analysis_schedule + '.csv')
+    if analysis_schedule is not None:
+        sch = pd.read_csv(path['sch'] + os.sep + analysis_schedule + '.csv')
+    else:
+        sch = None
 
     # Extract experiment catalog info
     cat = af.get_cat_info(path['cat'], include_mode='both', exclude_mode='calibration')
 
     # Path to all videos for the current date
-    vid_path = path['vidin'] + os.sep +  sch_date
+    if sch_num is not None: 
+        vid_path = path['vidin'] + os.sep +  sch_date
+    else:
+        vid_path = path['vidin']
 
      # Flag any large differences in video duration from experiment log, return list of videos to be processed
     vid_files = vp.check_video_duration(vid_path, sch, cat, vid_ext=vid_ext_raw, thresh_time=3.0)
@@ -122,48 +128,60 @@ def run_spatial_calibration(path, sch_date, sch_num, vid_ext_raw, analysis_sched
     # Get the size of the cat_raw
     cat_raw_size = cat_raw.shape
 
-    # Determine if cm_per_pix values already exsist in cat_raw where date==sch_date and sch_num==sch_num
-    cm_per_pix_exists = cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == sch_num), 'cm_per_pix'].values
-
-    # If there's any missing calibration values . . .
-    if max(np.isnan(cm_per_pix_exists)) or overwrite_existing:
-
-        # Find video_filename for calibration from cat_raw: where the date matches sch_date and the sch_num is 999
-        cal_video_filename = cat_raw[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == 999)]['video_filename'].values
-
-        # Define the full path to the calibration video
-        full_vid_path = vid_path + os.sep + cal_video_filename[0] + '.' + vid_ext_raw
-
-        # Raise exception if cal_video_filename has a length of zero
-        if len(cal_video_filename) == 0:
-            raise ValueError('The calibration video does not exist in the catalog file')
-        # Or, more than one
-        elif len(cal_video_filename) > 1:
-            raise ValueError('More than one calibration video exists in the catalog file')
-
-        # Raise exception if cal_video_filename is not in vid_path
-        if not os.path.exists(full_vid_path):
-            raise ValueError('The calibration video does not exist in the video directory: ' + full_vid_path)
-
-        # Run the spatial calibration
-        cm_per_pix = spatial_calibration(full_vid_path, reps=num_reps, font_size=font_size)
-
-        # Add cm_per_pix value to cat_raw.cm_per_pix where sch_num=sch_num
-        cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == sch_num), 'cm_per_pix'] = cm_per_pix
-
-        # Write cat_raw, if it has the same dimensions, or one new column
-        if (cat_raw.shape[0] == cat_raw_size[0]) and \
-            (cat_raw.shape[1] == cat_raw_size[1]):
-            cat_raw.to_csv(path['cat'], index=False)
-            print(' ')
-            print('Added cm_per_pix values to experiment_log.csv')
+    for index, row in cat.iterrows():
+        # Determine if cm_per_pix values already exsist in cat_raw where date==sch_date and sch_num==sch_num
+        if sch_num is not None: 
+            cm_per_pix_exists = cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == sch_num), 'cm_per_pix'].values
         else:
-            # raise exception
-            raise ValueError('cat_raw has the wrong dimensions-- cannot write the time code data to experiment_log')
-        
-    else:
-        print(' ')
-        print('cm_per_pix values already exist in experiment_log.csv for the current date and schedule number.')
+            cm_per_pix_exists = cat_raw.loc[(cat_raw['date'] == row.date) & (cat_raw['trial_num'] == row.trial_num), 'cm_per_pix'].values
+            sch_date = row.date
+            sch_num = None
+
+        # If there's any missing calibration values . . .
+        if max(np.isnan(cm_per_pix_exists)) or overwrite_existing:
+
+            # Find video_filename for calibration from cat_raw: where the date matches sch_date and the sch_num is 999
+            if sch_num is not None:
+                cal_video_filename = cat_raw[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == 999)]['video_filename'].values
+            else:
+                cal_video_filename = cat_raw[(cat_raw['date'] == row.date) & (cat_raw['calibration'] == 1)]['video_filename'].values
+
+            # Define the full path to the calibration video
+            full_vid_path = vid_path + os.sep + cal_video_filename[0] + '.' + vid_ext_raw
+
+            # Raise exception if cal_video_filename has a length of zero
+            if len(cal_video_filename) == 0:
+                raise ValueError('The calibration video does not exist in the catalog file')
+            # Or, more than one
+            elif len(cal_video_filename) > 1:
+                raise ValueError('More than one calibration video exists in the catalog file')
+
+            # Raise exception if cal_video_filename is not in vid_path
+            if not os.path.exists(full_vid_path):
+                raise ValueError('The calibration video does not exist in the video directory: ' + full_vid_path)
+
+            # Run the spatial calibration
+            cm_per_pix = spatial_calibration(full_vid_path, reps=num_reps, font_size=font_size)
+
+            # Add cm_per_pix value to cat_raw.cm_per_pix where sch_num=sch_num
+            if sch_num is not None:
+                cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['sch_num'] == sch_num), 'cm_per_pix'] = cm_per_pix
+            else:
+                cat_raw.loc[(cat_raw['date'] == sch_date) & (cat_raw['trial_num'] == row.trial_num), 'cm_per_pix'] = cm_per_pix
+
+            # Write cat_raw, if it has the same dimensions, or one new column
+            if (cat_raw.shape[0] == cat_raw_size[0]) and \
+                (cat_raw.shape[1] == cat_raw_size[1]):
+                cat_raw.to_csv(path['cat'], index=False)
+                print(' ')
+                print('Added cm_per_pix values to experiment_log.csv')
+            else:
+                # raise exception
+                raise ValueError('cat_raw has the wrong dimensions-- cannot write the time code data to experiment_log')
+            
+        else:
+            print(' ')
+            print('cm_per_pix values already exist in experiment_log.csv for the current date and schedule number.')
 
 
 def run_mask_acq(path, vid_ext_raw, analysis_schedule, sch_date=None, sch_num=None, 
